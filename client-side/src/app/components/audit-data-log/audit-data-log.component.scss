@@ -1,0 +1,41 @@
+// .list-container {
+//     min-width: 60rem;
+//     max-width: 60rem;
+//     width: 100%;
+
+// }
+.text-bold{
+    font-weight: bold;
+}
+#list {
+    ::ng-deep {
+        .table-body .table-row,
+        .table-body .table-row fieldset
+        {
+            height: auto;
+            font-size:  var(--pep-font-size-sm, 0.875rem) !important ;
+        }
+        ul {
+            // color: red !important;
+            margin-left: -1rem;
+            list-style: none;
+
+        }
+        ul li::before {
+            content: "\2022";  /* Add content: \2022 is the CSS Code/unicode for a bullet */
+            font-weight: bold; /* If you want it to be bold */
+            display: inline-block; /* Needed to add space between the bullet and the text */
+            width: 1em; /* Also needed for space (tweak if needed) */
+            margin-left: -1em; /* Also needed for space (tweak if needed) */
+          }
+        //   span.short-span {
+        //     display: inline-block;
+        //     width: 70px;
+        //     white-space: nowrap;
+        //     overflow: hidden !important;
+        //     text-overflow: ellipsis;
+        // }
+    }
+}
+
+

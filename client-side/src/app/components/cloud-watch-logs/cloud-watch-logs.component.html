@@ -1,0 +1,23 @@
+<div class="addon-page-container">
+    <pep-top-bar class="text-bold" [title]="'Logs' | translate">
+        <div header-start-content>
+
+        </div>
+        <div header-end-content>
+            <div>
+                <div class="progress-indicator pep-spacing-element"></div>
+            </div>
+        </div>
+    </pep-top-bar>
+    <div class="main-content">
+        <div class="main-layout flip">
+            <div class="content">
+                <div class="list-container" #conflictslistContainer>
+                    <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
+                    </div>
+                    <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="8" [selectionTypeForActions]="'none'" [noDataFoundMsg]="'NO_DATA_FOUND' | translate " [parentScroll]="conflictslistContainer">
+                    </pep-list>
+                </div>
+            </div>
+        </div>
+    </div>

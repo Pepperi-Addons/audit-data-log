@@ -1,0 +1,14 @@
+{
+    "Components_Example_Title": "@pep-addons/ngx-lib : Pepperi Components - Library components written with Angular10",
+    "List_Example_Title": "Pep list example",
+    "Changed_From": "changed from",
+    "To": "to",
+    "ActionDateTime" : "Action Date Time",
+    "User":"User",
+    "UpdatedFields":  "Updated Fields",
+    "Type": "Type",
+    "Operation": "Operation",
+    "NO_DATA_FOUND": "No results were found."  ,
+    "ObjectKey"  :"Object Key"
+    
+}
