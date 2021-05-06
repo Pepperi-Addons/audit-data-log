@@ -12,6 +12,7 @@ export interface Document {
     CreationDateTime: string;
     ObjectModificationDateTime: string;
     UserUUID: string;
+    UserEmail?: string;
     ActionType: string;
     Resource: string;
     UpdatedFields: UpdatedField[];

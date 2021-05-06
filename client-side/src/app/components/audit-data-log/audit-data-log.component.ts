@@ -1,5 +1,5 @@
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
-import { FIELD_TYPE, ObjectsDataRow, PepDataConvertorService, PepFieldData, PepRowData, UIControl, X_ALIGNMENT_TYPE } from '@pepperi-addons/ngx-lib';
+import { Component, destroyPlatform, Input, OnInit, ViewChild } from '@angular/core';
+import { FIELD_TYPE, ObjectsDataRow, PepDataConvertorService, PepFieldData, PepRowData, PepWindowScrollingService, UIControl, X_ALIGNMENT_TYPE } from '@pepperi-addons/ngx-lib';
 import { IPepMenuItemClickEvent, PepMenuItem } from '@pepperi-addons/ngx-lib/menu';
 import { TranslateService } from '@ngx-translate/core';
 import { DEFAULT_PAGE_SIZE, IPepListPagerChangeEvent, IPepListSortingChangeEvent, IPepListSortingOptionChangeEvent, PepListComponent, PepListPagerType, PepListViewType } from '@pepperi-addons/ngx-lib/list';
@@ -20,6 +20,8 @@ import {
 } from '@pepperi-addons/ngx-lib/smart-filters';
 import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
 import { pepIconSystemBin } from '@pepperi-addons/ngx-lib/icon';
+import { disableDebugTools } from '@angular/platform-browser';
+import { IPepFormFieldClickEvent } from '@pepperi-addons/ngx-lib/form';
 @Component({
   selector: 'addon-audit-data-log',
   templateUrl: './audit-data-log.component.html',
@@ -84,8 +86,8 @@ export class AuditDataLogComponent implements OnInit {
           UUID: '00000000-0000-0000-0000-00000000c07e',
           Name: 'Nucleus'
         })
-        this.reloadList();
         this.loadSmartFilters();
+        this.reloadList();
         this.loadMenuItems();
       });
     });
@@ -145,6 +147,9 @@ export class AuditDataLogComponent implements OnInit {
   notifyValueChanged(event) {
     debugger;
   }
+  selectedRowsChanged(selectedRowsCount: number) {
+    debugger;
+  }
 
   sortingChange(sortingChangeEvent: IPepListSortingChangeEvent) {
     switch (sortingChangeEvent.sortBy) {
@@ -166,10 +171,23 @@ export class AuditDataLogComponent implements OnInit {
         this.docs.sort((a, b) =>
           sortingChangeEvent.isAsc ?
             (a.Resource > b.Resource ? -1 : 1) :
-            (b.ActionType > a.ActionType ? -1 : 1)
+            (b.Resource > a.Resource ? -1 : 1)
         );
         break;
-
+      case 'User':
+        this.docs.sort((a, b) =>
+          sortingChangeEvent.isAsc ?
+            (a.UserEmail > b.UserEmail ? -1 : 1) :
+            (b.UserEmail > a.UserEmail ? -1 : 1)
+        );
+        break;
+      case 'ID':
+        this.docs.sort((a, b) =>
+          sortingChangeEvent.isAsc ?
+            (a.ObjectKey > b.ObjectKey ? -1 : 1) :
+            (b.ObjectKey > a.ObjectKey ? -1 : 1)
+        );
+        break;
     }
 
     console.log(`after sort by ${sortingChangeEvent.sortBy} - ascending ${sortingChangeEvent.isAsc}`, this.docs);
@@ -196,7 +214,6 @@ export class AuditDataLogComponent implements OnInit {
       rows = this.dataConvertorService.convertListData(
         tableData
       );
-
     }
 
     this.customConflictList.initListData(
@@ -239,13 +256,14 @@ export class AuditDataLogComponent implements OnInit {
       FieldType: FIELD_TYPE.RichTextHTML,
       Enabled: false
     };
+    const href = window.location.origin + '/settings/' + this.addonService.addonUUID + '/cloud-watch-logs';
+
     switch (key) {
       case "ID":
         dataRowField.ColumnWidth = 5;
-        const operationStr = `<a href="https://app.sandbox.pepperi.com/settings/00000000-0000-0000-0000-00000da1a109/cloud-watch-logs?dev=true" 
-        target="_blank"  rel="noopener noreferrer"><span class="short-span">${document.ActionUUID}</span></a>`
+        const operationStr = `<a href="${href}?action_uuid=${document.ActionUUID}&action_date_time=${document.ObjectModificationDateTime}"
+        target="_blank" rel="noopener noreferrer"><span class="short-span">${document.ActionUUID}</span></a>`
         dataRowField.FormattedValue = dataRowField.Value = operationStr;
-
         break;
       case "Type":
         dataRowField.ColumnWidth = 3;
@@ -260,7 +278,9 @@ export class AuditDataLogComponent implements OnInit {
         dataRowField.ColumnWidth = 7;
         let addon = this.addons.find(x => x.UUID === document.AddonUUID);
         const typeStr = `${addon.Name}: ${document.Resource}`
-        dataRowField.FormattedValue = dataRowField.Value = typeStr;
+        const resourceStr = `<a href="${href}?addon_uuid=${addon.UUID}&action_date_time=${document.ObjectModificationDateTime}"
+        target="_blank" rel="noopener noreferrer"><span class="short-span">${typeStr}</span></a>`
+        dataRowField.FormattedValue = dataRowField.Value = resourceStr;
 
         break;
       case "UpdatedFields":
@@ -272,6 +292,7 @@ export class AuditDataLogComponent implements OnInit {
         const user = this.users.find(u => u.UUID === document.UserUUID);
         const userStr = `${user?.Email} (${user?.InternalID})`;
         dataRowField.FormattedValue = dataRowField.Value = userStr;
+        document.UserEmail = user?.Email;
         break;
 
       case "ActionDateTime":
@@ -310,7 +331,7 @@ export class AuditDataLogComponent implements OnInit {
           filter.value.first.forEach(value => {
             values.push(value)
           });
-          let valuesString = values.join(' , ');
+          let valuesString = values.join(',');
           if (filter.fieldId === 'UserUUID') {
             let usersUUIDs = [];
             values.forEach((value) => {
@@ -360,6 +381,9 @@ export class AuditDataLogComponent implements OnInit {
     console.log(search);
     debugger;
   }
+  onCustomizeFieldClick(fieldClickEvent: IPepFormFieldClickEvent) {
+    debugger;
+  }
 
   onMenuItemClicked(action: IPepMenuItemClickEvent): void {
     alert(action.source.key);
@@ -387,8 +411,9 @@ export class AuditDataLogComponent implements OnInit {
 
     switch (filter.operator.id) {
       case 'today':
-        var yesterday = new Date(new Date(now).setDate(now.getDate() - 1));
-        whereClause = `ObjectModificationDateTime>=${yesterday.toISOString()} and ObjectModificationDateTime<=${now.toISOString()}`;
+        var start = new Date();
+        start.setHours(0, 0, 0, 0);
+        whereClause = `ObjectModificationDateTime>=${start.toISOString()} and ObjectModificationDateTime<=${now.toISOString()}`;
         break;
       case 'thisWeek':
         var previousWeek = new Date(new Date(now).setDate(now.getDate() - 7));

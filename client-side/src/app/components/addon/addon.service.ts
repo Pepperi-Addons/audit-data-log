@@ -79,11 +79,19 @@ export class AddonService {
     }
 
 
-    async cloud_watch_logs(start_data: string, end_data: string) {
+    async cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string) {
+        let params = {};
+        if (addon_uuid) {
+            params[`addon_uuid`] = `'${addon_uuid}'`;;
+        }
+        if (action_uuid) {
+            params[`action_uuid`] = `'${action_uuid}'`;
+
+        }
         const body = {
-            StartDateTime: start_data,
-            EndDateTime: end_data
+            StartDateTime: start_data.toLocaleString(),
+            EndDateTime: end_data.toLocaleString()
         };
-        return await this.papiClient.addons.api.uuid(this.addonUUID).file('api').func('get_logs_from_cloud_watch').post(undefined, body);
+        return await this.papiClient.addons.api.uuid(this.addonUUID).file('api').func('get_logs_from_cloud_watch').post(params, body);
     }
 }

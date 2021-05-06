@@ -26,6 +26,7 @@ export class CloudWatchLogsComponent implements OnInit {
 
   private _showItems = true;
   filtersStr: string;
+  actionDateTime: any;
   get showItems() {
     return this._showItems;
   }
@@ -39,6 +40,8 @@ export class CloudWatchLogsComponent implements OnInit {
   viewType: PepListViewType = "table";
   users = [];
   docs = [];
+  actionUUID = '';
+  addonUUID = '';
 
   constructor(public translate: TranslateService,
     private dataConvertorService: PepDataConvertorService,
@@ -51,17 +54,29 @@ export class CloudWatchLogsComponent implements OnInit {
   }
 
   private reloadList() {
-    this.addonService.cloud_watch_logs('2021-05-01T05:28:42Z', '2021-05-04T05:28:42Z').then((logs) => {
-      logs.results.forEach(element => {
-
-        this.docs.push({
-          ActionDateTime: element[0].value,
-          Message: element[1].value,
-
+    this.routeParams.queryParams.subscribe((params) => {
+      this.actionUUID = params.action_uuid;
+      this.addonUUID = params.addon_uuid;
+      this.actionDateTime = params.action_date_time;
+      const date = new Date(this.actionDateTime);
+      const startDate = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() - 10));
+      const endDate = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() + 10));
+      this.addonService.cloud_watch_logs(startDate, endDate, undefined, this.actionUUID).then((logs) => {
+        logs.results.forEach(element => {
+          this.docs.push({
+            ActionDateTime: element[0].value,
+            Message: element[1].value,
+            AddonUUID: this.addonUUID,
+            ActionUUID: this.actionUUID,
+          });
         });
+        this.loadDataLogsList(this.docs);
       });
-      this.loadDataLogsList(this.docs);
-    });
+    })
+
+  }
+
+  onFiltersChange(filtersData: IPepSmartFilterData[]) {
 
   }
 
@@ -82,6 +97,12 @@ export class CloudWatchLogsComponent implements OnInit {
     const tableData = new Array<PepRowData>();
     docs.forEach((doc) => {
       const userKeys = ["ActionDateTime", "Message"];
+      if (this.actionUUID) {
+        userKeys.push('ActionUUID');
+      }
+      if (this.addonUUID) {
+        userKeys.push('AddonUUID');
+      }
       tableData.push(
         this.convertConflictToPepRowData(doc, userKeys)
       );
@@ -127,7 +148,7 @@ export class CloudWatchLogsComponent implements OnInit {
       Value: document[key] ? document[key] : "",
       ColumnWidth: 10,
       OptionalValues: [],
-      FieldType: FIELD_TYPE.RichTextHTML,
+      FieldType: FIELD_TYPE.TextBox,
       Enabled: false
     };
     switch (key) {
@@ -140,7 +161,16 @@ export class CloudWatchLogsComponent implements OnInit {
         dataRowField.FormattedValue = dataRowField.Value = document['Message'];
 
         break;
+      case "AddonUUID":
+        dataRowField.ColumnWidth = 30;
+        dataRowField.FormattedValue = dataRowField.Value = document['AddonUUID'];
 
+        break;
+      case "ActionUUID":
+        dataRowField.ColumnWidth = 30;
+        dataRowField.FormattedValue = dataRowField.Value = document['ActionUUID'];
+
+        break;
       default:
         dataRowField.FormattedValue = document[key]
           ? document[key].toString()

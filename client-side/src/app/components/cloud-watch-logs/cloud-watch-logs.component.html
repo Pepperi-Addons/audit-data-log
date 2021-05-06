@@ -10,12 +10,16 @@
         </div>
     </pep-top-bar>
     <div class="main-content">
-        <div class="main-layout flip">
+        <pep-side-bar #sideNav>
+            <pep-smart-filters [fields]="fields" [filters]="filters" (filtersChange)="onFiltersChange($event)">
+            </pep-smart-filters>
+        </pep-side-bar>
+        <div class="main-layout pull-right flip">
             <div class="content">
                 <div class="list-container" #conflictslistContainer>
                     <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
                     </div>
-                    <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="8" [selectionTypeForActions]="'none'" [noDataFoundMsg]="'NO_DATA_FOUND' | translate " [parentScroll]="conflictslistContainer">
+                    <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="50" [selectionTypeForActions]="'none'" [noDataFoundMsg]="'NO_DATA_FOUND' | translate " [parentScroll]="conflictslistContainer">
                     </pep-list>
                 </div>
             </div>
