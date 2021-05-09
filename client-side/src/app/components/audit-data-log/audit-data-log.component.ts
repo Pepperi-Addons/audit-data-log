@@ -21,6 +21,7 @@ import {
 import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
 import { pepIconSystemBin } from '@pepperi-addons/ngx-lib/icon';
 import { disableDebugTools } from '@angular/platform-browser';
+import QueryUtil from '../../../../../shared/utilities/query-util';
 import { IPepFormFieldClickEvent } from '@pepperi-addons/ngx-lib/form';
 @Component({
   selector: 'addon-audit-data-log',
@@ -351,7 +352,7 @@ export class AuditDataLogComponent implements OnInit {
           filters.push(`${filter.fieldId}.keyword=${valuesString}`);
           break;
         case 'date':
-          const whereClause = this.buildWhereClauseByDateField(filter);
+          const whereClause = QueryUtil.buildWhereClauseByDateField(filter);
           filters.push(whereClause);
           break;
       }
@@ -404,67 +405,6 @@ export class AuditDataLogComponent implements OnInit {
     return menuItems;
   }
 
-  buildWhereClauseByDateField(filter: IPepSmartFilterData) {
-    let whereClause = '';
-
-    var now = new Date()
-
-    switch (filter.operator.id) {
-      case 'today':
-        var start = new Date();
-        start.setHours(0, 0, 0, 0);
-        whereClause = `ObjectModificationDateTime>=${start.toISOString()} and ObjectModificationDateTime<=${now.toISOString()}`;
-        break;
-      case 'thisWeek':
-        var previousWeek = new Date(new Date(now).setDate(now.getDate() - 7));
-        whereClause = `ObjectModificationDateTime>=${previousWeek.toISOString()} and ObjectModificationDateTime<=${now.toISOString()}`;
-        break;
-      case 'thisMonth':
-        var previousMonth = new Date(new Date(now).setMonth(now.getMonth() - 1));
-        whereClause = `ObjectModificationDateTime>=${previousMonth.toISOString()} and ObjectModificationDateTime<=${now.toISOString()}`;
-        break;
-      case 'on':
-        whereClause = `ObjectModificationDateTime=${filter.value.first}`;
-        break;
-      case 'dateRange':
-        whereClause = `ObjectModificationDateTime>=${filter.value.first} and ObjectModificationDateTime<=${filter.value.second}`;
-        break;
-      case 'after':
-        var previousMonth = new Date(new Date(now).setMonth(now.getMonth() - 1));
-        whereClause = `ObjectModificationDateTime>=${filter.value.first}`;
-        break;
-      case 'before':
-        whereClause = `ObjectModificationDateTime<=${filter.value.first}`;
-        break;
-      case 'inTheLast':
-        var startDate = this.calculateStartDate(filter)
-        whereClause = `ObjectModificationDateTime>=${startDate} and ObjectModificationDateTime<=${now.toISOString()}`;
-        break;
-    }
-    return whereClause;
-  }
-
-  calculateStartDate(filter: IPepSmartFilterData) {
-    var now = new Date()
-    var startDate = new Date()
-
-    switch (filter.operatorUnit.id) {
-      case 'days':
-        startDate = new Date(new Date(now).setDate(now.getDate() - filter.value.first));
-        break;
-      case 'months':
-        startDate = new Date(new Date(now).setDate(now.getMonth() - filter.value.first));
-        break;
-      case 'weeks':
-        startDate = new Date(new Date(now).setDate(now.getDate() - (filter.value.first * 7)));
-        break;
-      case 'years':
-        startDate = new Date(new Date(now).setDate(now.getFullYear() - filter.value.first));
-        break;
-
-    }
-    return startDate;
-  }
 }
 
 

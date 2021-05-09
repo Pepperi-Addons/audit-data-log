@@ -1,5 +1,5 @@
 import jwt from 'jwt-decode';
-import { PapiClient, User } from '@pepperi-addons/papi-sdk';
+import { AuditLog, PapiClient, User } from '@pepperi-addons/papi-sdk';
 import { Injectable } from '@angular/core';
 import { Document } from "../../../../../shared/models/document"
 
@@ -35,6 +35,10 @@ export class AddonService {
         const accessToken = this.session.getIdpToken();
         this.parsedToken = accessToken ? jwt(accessToken) : {};
         this.papiBaseURL = this.parsedToken["pepperi.baseurl"];
+    }
+
+    async getExecutionLog(executionUUID): Promise<AuditLog> {
+        return this.papiClient.get(`/audit_logs/${executionUUID}`);
     }
 
     async getUsers() {
@@ -79,7 +83,7 @@ export class AddonService {
     }
 
 
-    async cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string) {
+    async cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, async: boolean) {
         let params = {};
         if (addon_uuid) {
             params[`addon_uuid`] = `'${addon_uuid}'`;;
@@ -92,6 +96,11 @@ export class AddonService {
             StartDateTime: start_data.toLocaleString(),
             EndDateTime: end_data.toLocaleString()
         };
-        return await this.papiClient.addons.api.uuid(this.addonUUID).file('api').func('get_logs_from_cloud_watch').post(params, body);
+        if (async) {
+            return await this.papiClient.addons.api.uuid(this.addonUUID).async().file('api').func('get_logs_from_cloud_watch').post(params, body);
+        } else {
+            return await this.papiClient.addons.api.uuid(this.addonUUID).file('api').func('get_logs_from_cloud_watch').post(params, body);
+
+        }
     }
 }

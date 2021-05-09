@@ -1,5 +1,5 @@
 <div class="addon-page-container">
-    <pep-top-bar class="text-bold" [title]="'Logs' | translate">
+    <pep-top-bar class="text-bold" [title]="logsTitle">
         <div header-start-content>
 
         </div>
@@ -8,6 +8,8 @@
                 <div class="progress-indicator pep-spacing-element"></div>
             </div>
         </div>
+        <pep-list-total [totalRows]="customConflictList?.totalRows"></pep-list-total>
+
     </pep-top-bar>
     <div class="main-content">
         <pep-side-bar #sideNav>

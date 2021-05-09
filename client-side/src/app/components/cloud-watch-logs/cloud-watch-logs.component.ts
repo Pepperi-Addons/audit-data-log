@@ -8,6 +8,7 @@ import { createSmartFilterField, IPepSmartFilterData, IPepSmartFilterField, IPep
 import { AddonService } from '../addon/addon.service';
 import { Document, UpdatedField } from '../../../../../shared/models/document'
 import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
+import QueryUtil from '../../../../../shared/utilities/query-util';
 
 @Component({
   selector: 'addon-cloud-watch-logs',
@@ -36,7 +37,7 @@ export class CloudWatchLogsComponent implements OnInit {
   searchString = '';
   menuItems: Array<PepMenuItem>;
   selectedMenuItem: PepMenuItem;
-
+  logsTitle: string;
   viewType: PepListViewType = "table";
   users = [];
   docs = [];
@@ -53,41 +54,123 @@ export class CloudWatchLogsComponent implements OnInit {
   ngAfterViewInit(): void {
   }
 
+  private async getCloudWatchLogsAsync(tart_data: Date, end_data: Date, addon_uuid: string, action_uuid: string) {
+    const logsResult = await this.addonService.cloud_watch_logs(tart_data, end_data, addon_uuid, action_uuid, true)
+    const condition = (logRes) => {
+      return logRes &&
+        logRes.Status &&
+        logRes.Status.Name !== "InProgress" &&
+        logRes.Status.Name !== "InRetry" ?
+        false : true;
+    }
+    this.poll(() => this.addonService.getExecutionLog(logsResult.ExecutionUUID), condition, 1500)
+      .then(logRes => {
+        this.pollCallback(logRes);
+      });
+  }
+
+  async poll(fn, fnCondition, ms) {
+    let result = await fn();
+    while (fnCondition(result)) {
+      await this.wait(ms);
+      result = await fn();
+    }
+    return result;
+  }
+
+  wait(ms = 1000) {
+    return new Promise(resolve => {
+      console.log(`waiting ${ms} ms...`);
+      setTimeout(resolve, ms);
+    });
+  }
+
+  pollCallback(logRes) {
+    const resultObj = JSON.parse(
+      logRes.AuditInfo.ResultObject
+    );
+    if (resultObj.status === 'Complete') {
+      window.clearTimeout();
+    } else if (resultObj.success == "Exception") {
+      window.clearTimeout();
+    }
+
+  }
+
   private reloadList() {
     this.routeParams.queryParams.subscribe((params) => {
       this.actionUUID = params.action_uuid;
       this.addonUUID = params.addon_uuid;
       this.actionDateTime = params.action_date_time;
       const date = new Date(this.actionDateTime);
-      const startDate = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() - 10));
-      const endDate = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() + 10));
-      this.addonService.cloud_watch_logs(startDate, endDate, undefined, this.actionUUID).then((logs) => {
-        logs.results.forEach(element => {
-          this.docs.push({
-            ActionDateTime: element[0].value,
-            Message: element[1].value,
-            AddonUUID: this.addonUUID,
-            ActionUUID: this.actionUUID,
-          });
-        });
+      let startDate;
+      let endDate;
+      if (this.actionDateTime) {
+        startDate = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() - 10));
+        endDate = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() + 10));
+      }
+      else {
+        var now = new Date()
+        startDate = new Date(new Date(now).setDate(now.getDate() - 1));
+        endDate = now;
+      }
+
+      this.logsTitle = `${startDate.toLocaleString()} - ${endDate.toLocaleString()}`
+
+      this.addonService.cloud_watch_logs(startDate, endDate, undefined, this.actionUUID, false).then((logs) => {
+        let logsCW = this.buildLogsList(logs);
+        this.docs = logsCW;
         this.loadDataLogsList(this.docs);
       });
     })
 
   }
 
-  onFiltersChange(filtersData: IPepSmartFilterData[]) {
+  private buildLogsList(logs: any) {
+    let cwLogs = [];
 
+    logs.results.forEach(element => {
+      cwLogs.push({
+        ActionDateTime: element[0].value,
+        Message: element[1].value,
+        AddonUUID: this.addonUUID,
+        ActionUUID: this.actionUUID,
+      });
+    });
+    return cwLogs;
   }
 
   onPagerChange(event: IPepListPagerChangeEvent): void {
   }
 
-  ngOnInit(): void {
-    this.reloadList();
 
+  onFiltersChange(filtersData: IPepSmartFilterData[]) {
+    let filters = [];
+    for (const filter of filtersData) {
+      switch (filter.operator.componentType[0]) {
+        case 'date':
+          const whereClause = QueryUtil.buildWhereClauseByDateField(filter);
+          filters.push(whereClause);
+          break;
+      }
+    }
+    this.filtersStr = filters.join(' and ');
+    const startDate = new Date()
+    const endDate = new Date(new Date(startDate).setMonth(startDate.getMonth() - 1));
+
+    this.addonService.cloud_watch_logs(startDate, endDate, undefined, this.actionUUID, false).then((logs) => {
+      let logsCW = this.buildLogsList(logs);
+      this.docs = logsCW;
+      this.loadDataLogsList(this.docs);
+    });
+    debugger;
+    console.log(JSON.stringify(filtersData))
   }
 
+  ngOnInit(): void {
+    this.loadSmartFilters();
+    this.reloadList();
+  }
 
   notifyValueChanged(event) {
     debugger;
@@ -128,6 +211,12 @@ export class CloudWatchLogsComponent implements OnInit {
       false
     );
 
+  }
+
+  private loadSmartFilters(): void {
+    const operators: PepSmartFilterOperatorType[] = ['before', 'after', 'today', 'thisWeek', 'thisMonth', 'dateRange', 'on', 'inTheLast'];
+    this.fields = [
+      createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators }, 'date-time')];
   }
 
   convertConflictToPepRowData(doc: Document, customKeys) {
