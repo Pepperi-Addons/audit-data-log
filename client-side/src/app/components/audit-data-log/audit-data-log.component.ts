@@ -19,7 +19,7 @@ import {
 
 } from '@pepperi-addons/ngx-lib/smart-filters';
 import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
-import { pepIconSystemBin } from '@pepperi-addons/ngx-lib/icon';
+import { pepIconArrowRightAlt } from '@pepperi-addons/ngx-lib/icon';
 import { disableDebugTools } from '@angular/platform-browser';
 import QueryUtil from '../../../../../shared/utilities/query-util';
 import { IPepFormFieldClickEvent } from '@pepperi-addons/ngx-lib/form';
@@ -313,12 +313,19 @@ export class AuditDataLogComponent implements OnInit {
   private buildUpdatedFieldsTable(updatedFields: UpdatedField[]): string {
     let str = '';
     if (updatedFields) {
-      str += '<ul>'
+      str += '<div class="updated-fields">'
       for (const updateField of updatedFields) {
-        str += `<li><b>${updateField.FieldID}</b> ${this.translate.instant("Changed_From")} <b>${updateField.OldValue}</b> ${this.translate.instant("To")} <b>${updateField.NewValue}</b></li>`
+        str += 
+          `<div class="updated-field"> 
+            <p><b>${updateField.FieldID}</b></p>
+            <div class="updated-field__item">
+              <p><i>${updateField.OldValue}</i></p>
+              <svg>${pepIconArrowRightAlt.data}</svg>
+              <p><i>${updateField.NewValue}</i></p>
+            </div>
+          </div>`
       }
-      str += '</ul>'
-
+      str += '</div>'
     }
     return str;
   }
