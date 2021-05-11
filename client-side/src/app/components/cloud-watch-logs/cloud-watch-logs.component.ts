@@ -9,6 +9,7 @@ import { AddonService } from '../addon/addon.service';
 import { Document, UpdatedField } from '../../../../../shared/models/document'
 import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
 import QueryUtil from '../../../../../shared/utilities/query-util';
+import { PepDialogActionButton, PepDialogData, PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
 
 @Component({
   selector: 'addon-cloud-watch-logs',
@@ -28,6 +29,10 @@ export class CloudWatchLogsComponent implements OnInit {
   private _showItems = true;
   filtersStr: string;
   actionDateTime: any;
+  endDate: Date;
+  startDate: Date;
+  endDateParam: Date;
+  startDateParam: Date;
   get showItems() {
     return this._showItems;
   }
@@ -37,7 +42,7 @@ export class CloudWatchLogsComponent implements OnInit {
   searchString = '';
   menuItems: Array<PepMenuItem>;
   selectedMenuItem: PepMenuItem;
-  logsTitle: string;
+  logsTitle: string = '';
   viewType: PepListViewType = "table";
   users = [];
   docs = [];
@@ -54,19 +59,37 @@ export class CloudWatchLogsComponent implements OnInit {
   ngAfterViewInit(): void {
   }
 
-  private async getCloudWatchLogsAsync(tart_data: Date, end_data: Date, addon_uuid: string, action_uuid: string) {
-    const logsResult = await this.addonService.cloud_watch_logs(tart_data, end_data, addon_uuid, action_uuid, true)
-    const condition = (logRes) => {
-      return logRes &&
-        logRes.Status &&
-        logRes.Status.Name !== "InProgress" &&
-        logRes.Status.Name !== "InRetry" ?
-        false : true;
+  // private async getCloudWatchLogsAsync(tart_data: Date, end_data: Date, addon_uuid: string, action_uuid: string) {
+  //   const logsResult = await this.addonService.cloud_watch_logs(tart_data, end_data, addon_uuid, action_uuid, true)
+  //   const condition = (logRes) => {
+  //     return logRes &&
+  //       logRes.Status &&
+  //       logRes.Status.Name !== "InProgress" &&
+  //       logRes.Status.Name !== "InRetry" ?
+  //       false : true;
+  //   }
+  //   this.poll(() => this.addonService.getExecutionLog(logsResult.ExecutionUUID), condition, 1500)
+  //     .then(logRes => {
+  //       this.pollCallback(logRes);
+  //     });
+  // }
+
+  sortingChange(sortingChangeEvent: IPepListSortingChangeEvent) {
+    switch (sortingChangeEvent.sortBy) {
+      case 'ActionDateTime':
+        this.docs = this.docs.sort((a, b) =>
+          sortingChangeEvent.isAsc ?
+            new Date(a.ActionDateTime).getTime() - new Date(b.ActionDateTime).getTime() :
+            new Date(b.ActionDateTime).getTime() - new Date(a.ActionDateTime).getTime()
+        );
+        break;
     }
-    this.poll(() => this.addonService.getExecutionLog(logsResult.ExecutionUUID), condition, 1500)
-      .then(logRes => {
-        this.pollCallback(logRes);
-      });
+
+    console.log(`after sort by ${sortingChangeEvent.sortBy} - ascending ${sortingChangeEvent.isAsc}`, this.docs);
+
+    this.loadDataLogsList(this.docs);
+
+    debugger;
   }
 
   async poll(fn, fnCondition, ms) {
@@ -97,33 +120,51 @@ export class CloudWatchLogsComponent implements OnInit {
 
   }
 
+
   private reloadList() {
     this.routeParams.queryParams.subscribe((params) => {
       this.actionUUID = params.action_uuid;
       this.addonUUID = params.addon_uuid;
       this.actionDateTime = params.action_date_time;
       const date = new Date(this.actionDateTime);
-      let startDate;
-      let endDate;
       if (this.actionDateTime) {
-        startDate = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() - 10));
-        endDate = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() + 10));
+        this.startDate = this.startDateParam = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() - 10));
+        this.endDate = this.endDateParam = new Date(new Date(this.actionDateTime).setMinutes(date.getMinutes() + 10));
       }
       else {
         var now = new Date()
-        startDate = new Date(new Date(now).setDate(now.getDate() - 1));
-        endDate = now;
+        this.startDate = new Date(new Date(now).setDate(now.getDate() - 1));
+        this.endDate = now;
       }
+      this.setLogsTitle(this.startDate, this.endDate);
 
-      this.logsTitle = `${startDate.toLocaleString()} - ${endDate.toLocaleString()}`
-
-      this.addonService.cloud_watch_logs(startDate, endDate, undefined, this.actionUUID, false).then((logs) => {
+      this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString).subscribe((logs) => {
         let logsCW = this.buildLogsList(logs);
         this.docs = logsCW;
         this.loadDataLogsList(this.docs);
       });
     })
 
+  }
+
+  onSearchAutocompleteChanged(value) {
+    console.log(value);
+    // debugger;
+  }
+
+  onSearchStateChanged(searchStateChangeEvent: IPepSearchStateChangeEvent) {
+    // debugger;
+  }
+
+  private setLogsTitle(startDate: Date, endDate: Date) {
+    this.logsTitle = '';
+    if (this.actionUUID) {
+      this.logsTitle += `Action UUID: ${this.actionUUID}, `;
+    }
+    if (this.addonUUID) {
+      this.logsTitle += `Addon UUID: ${this.addonUUID}, `;
+    }
+    this.logsTitle += `${startDate.toLocaleString()} - ${endDate.toLocaleString()}`;
   }
 
   private buildLogsList(logs: any) {
@@ -145,24 +186,33 @@ export class CloudWatchLogsComponent implements OnInit {
 
 
   onFiltersChange(filtersData: IPepSmartFilterData[]) {
-    let filters = [];
-    for (const filter of filtersData) {
-      switch (filter.operator.componentType[0]) {
-        case 'date':
-          const whereClause = QueryUtil.buildWhereClauseByDateField(filter);
-          filters.push(whereClause);
-          break;
+    if (filtersData.length > 0) {
+      let dateRange;
+      for (const filter of filtersData) {
+        switch (filter.operator.componentType[0]) {
+          case 'date':
+            dateRange = QueryUtil.getStartAndEndDateTimeByFilter(filter);
+            this.startDate = dateRange.StartDateTime;
+            this.endDate = dateRange.EndDateTime;
+            break;
+        }
       }
+    } else {
+      this.endDate = this.endDateParam;
+      this.startDate = this.startDateParam;
     }
-    this.filtersStr = filters.join(' and ');
-    const startDate = new Date()
-    const endDate = new Date(new Date(startDate).setMonth(startDate.getMonth() - 1));
-
-    this.addonService.cloud_watch_logs(startDate, endDate, undefined, this.actionUUID, false).then((logs) => {
+    this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString).subscribe((logs) => {
       let logsCW = this.buildLogsList(logs);
       this.docs = logsCW;
       this.loadDataLogsList(this.docs);
-    });
+      this.setLogsTitle(this.startDate, this.endDate);
+    }, (err) => {
+      if (err.indexOf("Unknown Server Error") > -1) {
+        this.addonService.openDialog(this.translate.instant("Error"), 'please choose a shorter range')
+      } else {
+        this.addonService.openDialog(this.translate.instant("Error"), 'Error')
+      }
+    });;
     debugger;
     console.log(JSON.stringify(filtersData))
   }
@@ -180,12 +230,6 @@ export class CloudWatchLogsComponent implements OnInit {
     const tableData = new Array<PepRowData>();
     docs.forEach((doc) => {
       const userKeys = ["ActionDateTime", "Message"];
-      if (this.actionUUID) {
-        userKeys.push('ActionUUID');
-      }
-      if (this.addonUUID) {
-        userKeys.push('AddonUUID');
-      }
       tableData.push(
         this.convertConflictToPepRowData(doc, userKeys)
       );
@@ -214,9 +258,18 @@ export class CloudWatchLogsComponent implements OnInit {
   }
 
   private loadSmartFilters(): void {
-    const operators: PepSmartFilterOperatorType[] = ['before', 'after', 'today', 'thisWeek', 'thisMonth', 'dateRange', 'on', 'inTheLast'];
+    const operators: PepSmartFilterOperatorType[] = ['today', 'dateRange'];
     this.fields = [
       createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators }, 'date-time')];
+  }
+
+  onSearchChanged(search: any) {
+    this.searchString = search.value;
+    this.addonService.cloud_watch_logs(this.startDate, this.endDateParam, this.addonUUID, this.actionUUID, this.searchString).subscribe((docs) => {
+      this.loadDataLogsList(docs);
+    })
+    console.log(search);
+    debugger;
   }
 
   convertConflictToPepRowData(doc: Document, customKeys) {
@@ -243,22 +296,10 @@ export class CloudWatchLogsComponent implements OnInit {
     switch (key) {
       case "ActionDateTime":
         dataRowField.FormattedValue = dataRowField.Value = document['ActionDateTime'];
-
         break;
       case "Message":
         dataRowField.ColumnWidth = 30;
         dataRowField.FormattedValue = dataRowField.Value = document['Message'];
-
-        break;
-      case "AddonUUID":
-        dataRowField.ColumnWidth = 30;
-        dataRowField.FormattedValue = dataRowField.Value = document['AddonUUID'];
-
-        break;
-      case "ActionUUID":
-        dataRowField.ColumnWidth = 30;
-        dataRowField.FormattedValue = dataRowField.Value = document['ActionUUID'];
-
         break;
       default:
         dataRowField.FormattedValue = document[key]

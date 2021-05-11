@@ -1,15 +1,13 @@
 <div class="addon-page-container">
-    <pep-top-bar class="text-bold" [title]="logsTitle">
-        <div header-start-content>
-
-        </div>
-        <div header-end-content>
-            <div>
-                <div class="progress-indicator pep-spacing-element"></div>
-            </div>
-        </div>
+    <!-- <pep-top-bar [title]="logsTitle"> -->
+    <pep-top-bar>
         <pep-list-total [totalRows]="customConflictList?.totalRows"></pep-list-total>
 
+        <div header-end-content>
+            <div class="pep-spacing-element-negative paddingClass">{{logsTitle}}</div>
+            <pep-search [value]="searchString" (search)="onSearchChanged($event)" [triggerOn]="'click'" (valueChange)="onSearchAutocompleteChanged($event)" (stateChange)="onSearchStateChanged($event)">
+            </pep-search>
+        </div>
     </pep-top-bar>
     <div class="main-content">
         <pep-side-bar #sideNav>
@@ -17,13 +15,11 @@
             </pep-smart-filters>
         </pep-side-bar>
         <div class="main-layout pull-right flip">
-            <div class="content">
-                <div class="list-container" #conflictslistContainer>
-                    <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
-                    </div>
-                    <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="50" [selectionTypeForActions]="'none'" [noDataFoundMsg]="'NO_DATA_FOUND' | translate " [parentScroll]="conflictslistContainer">
-                    </pep-list>
+            <div class="list-container" #conflictslistContainer>
+                <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
                 </div>
+                <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="50" [selectionTypeForActions]="'none'" [noDataFoundMsg]="'NO_DATA_FOUND' | translate " (sortingChange)="sortingChange($event)">
+                </pep-list>
             </div>
         </div>
     </div>

@@ -4,9 +4,12 @@ import { Injectable } from '@angular/core';
 import { Document } from "../../../../../shared/models/document"
 
 import {
+    PepAddonService,
     // PepAddonService, PepHttpService, PepDataConvertorService,
     PepSessionService
 } from '@pepperi-addons/ngx-lib';
+import { PepDialogActionButton, PepDialogData, PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
+import { Observable } from 'rxjs';
 // import { PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
 // import {AddonUUID} from '../../../../../addon.config.json';
 @Injectable({ providedIn: 'root' })
@@ -26,11 +29,12 @@ export class AddonService {
     }
 
     constructor(
-        public session: PepSessionService
+        public session: PepSessionService,
+        private addonService: PepAddonService,
         // public addonService:  PepAddonService
         // ,public httpService: PepHttpService
         // ,public pepperiDataConverter: PepDataConvertorService
-        // ,public dialogService: PepDialogService
+        private dialogService: PepDialogService
     ) {
         const accessToken = this.session.getIdpToken();
         this.parsedToken = accessToken ? jwt(accessToken) : {};
@@ -58,49 +62,91 @@ export class AddonService {
         return this.papiClient.get(`/users/uuid/${uuid}`);
     }
 
-    async audit_data_log_query(search_string: string, where: string, search_string_fields: string) {
+    audit_data_log_query(search_string: string, where: string, search_string_fields: string): Observable<any> {
         const params = {};
         if (search_string) {
             params[`search_string`] = search_string;
-        } else if (where) {
+        }
+        if (where) {
             params[`where`] = where;
-        } else if (search_string_fields) {
+        }
+        if (search_string_fields) {
             params[`search_string_fields`] = search_string_fields;
         }
         params['order_by'] = 'ObjectModificationDateTime desc'
-        return await this.papiClient.addons.api.uuid(this.addonUUID).file('api').func('audit_data_logs').get(params);
+
+        return this.addonService.getAddonApiCall(
+            this.addonUUID,
+            'api',
+            'audit_data_logs',
+            { params: params },
+            false
+        );
     }
 
-    async audit_data_log_count() {
-        return await this.papiClient.addons.api.uuid(this.addonUUID).file('api').func('totals').get();
+    audit_data_log_distinct_values(search_string: string, where: string, search_string_fields: string, distinct_value: string) {
+        let params = {};
+        if (search_string) {
+            params[`search_string`] = search_string;
+        }
+        if (search_string_fields) {
+            params[`search_string_fields`] = search_string_fields;
+
+        }
+        if (where) {
+            params[`where`] = where;
+        }
+        params[`distinct_fields`] = distinct_value;
+        return this.addonService.getAddonApiCall(
+            this.addonUUID,
+            'api',
+            'filters',
+            { params: params },
+            false
+        );
     }
 
 
-    async audit_data_log_distinct_values(distinct_value: string[]) {
-        return await this.papiClient.addons.api.uuid(this.addonUUID).file('api').func('filters').get({
-            'distinct_fields': distinct_value,
-        });
-    }
-
-
-    async cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, async: boolean) {
+    cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, search_string: string) {
         let params = {};
         if (addon_uuid) {
-            params[`addon_uuid`] = `'${addon_uuid}'`;;
+            params[`addon_uuid`] = addon_uuid;;
         }
         if (action_uuid) {
-            params[`action_uuid`] = `'${action_uuid}'`;
-
+            params[`action_uuid`] = action_uuid;
         }
+        if (search_string) {
+            params[`search_string`] = search_string;
+        }
+
         const body = {
-            StartDateTime: start_data.toLocaleString(),
-            EndDateTime: end_data.toLocaleString()
+            StartDateTime: start_data.toUTCString(),
+            EndDateTime: end_data.toUTCString()
         };
-        if (async) {
-            return await this.papiClient.addons.api.uuid(this.addonUUID).async().file('api').func('get_logs_from_cloud_watch').post(params, body);
-        } else {
-            return await this.papiClient.addons.api.uuid(this.addonUUID).file('api').func('get_logs_from_cloud_watch').post(params, body);
+        return this.addonService.postAddonApiCall(
+            this.addonUUID,
+            'api',
+            'get_logs_from_cloud_watch',
+            body,
+            { params: params },
+            false
+        );
+    }
 
-        }
+    openDialog(title: string, content: string, callback?: any) {
+        const actionButton: PepDialogActionButton = {
+            title: "OK",
+            className: "",
+            callback: callback,
+        };
+
+        const dialogData = new PepDialogData({
+            title: title,
+            content: content,
+            actionButtons: [actionButton],
+            type: "custom",
+            showClose: false,
+        });
+        this.dialogService.openDefaultDialog(dialogData);
     }
 }

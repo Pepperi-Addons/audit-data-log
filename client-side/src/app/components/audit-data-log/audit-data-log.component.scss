@@ -27,14 +27,24 @@
                 margin-bottom: 0.75rem;
                 p {
                     margin: 0;
-                    max-width: calc(50% - 1rem);
+                    max-width: calc(50% - 0.75rem);
                     line-break: anywhere;
                 }
                 svg {
-                    width: 1rem;
-                    height: 1rem;
+                    width: 0.75rem;
+                    height: 0.75rem;
                 }
             }
         }
+        .short-span{
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     }
 }
+// .list-wrapper {
+//     overflow: auto;
+//     height: calc(100vh - calc(#{$header-height} + #{$top-bar-height} + #{$content-margin}));
+//     width: 100%;
+// }

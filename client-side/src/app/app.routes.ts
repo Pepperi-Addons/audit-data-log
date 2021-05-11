@@ -16,7 +16,7 @@ const routes: Routes = [
                 component: AuditDataLogComponent
             },
             {
-                path: 'cloud-watch-logs',
+                path: 'logs',
                 component: CloudWatchLogsComponent
             }
         ]

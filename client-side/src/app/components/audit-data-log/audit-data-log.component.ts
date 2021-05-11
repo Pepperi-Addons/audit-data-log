@@ -50,7 +50,7 @@ export class AuditDataLogComponent implements OnInit {
   searchString = '';
   menuItems: Array<PepMenuItem>;
   selectedMenuItem: PepMenuItem;
-  searchStringFields: 'ActionUUID,ObjectKey,UpdatedFields';
+  searchStringFields: string;
   viewType: PepListViewType = "table";
   users = [];
   addons = [];
@@ -61,6 +61,7 @@ export class AuditDataLogComponent implements OnInit {
     private dataConvertorService: PepDataConvertorService,
     private addonService: AddonService,
     public routeParams: ActivatedRoute) {
+    this.searchStringFields = 'ActionUUID,ObjectKey,UpdatedFields.FieldID,UpdatedFields.NewValue,UpdatedFields.OldValue';
     this.addonService.addonUUID = this.routeParams.snapshot.params['addon_uuid'];
   }
 
@@ -68,11 +69,14 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   private reloadList() {
-    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).then((docs) => {
+    // this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).then((docs) => {
+    //   this.docs = docs;
+    //   this.loadDataLogsList(docs);
+    // });
+    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.docs = docs;
       this.loadDataLogsList(docs);
     });
-
   }
 
   onPagerChange(event: IPepListPagerChangeEvent): void {
@@ -100,7 +104,8 @@ export class AuditDataLogComponent implements OnInit {
     const users: IPepSmartFilterFieldOption[] = [];
     const addons: IPepSmartFilterFieldOption[] = [];
 
-    this.addonService.audit_data_log_distinct_values(['Resource', 'ActionType', 'UserUUID', 'AddonUUID']).then(async (values) => {
+    const distinctValues = 'Resource,ActionType,UserUUID,AddonUUID';
+    this.addonService.audit_data_log_distinct_values(this.searchString, this.filtersStr, this.searchStringFields, distinctValues).subscribe(async (values) => {
       const resourceValues = values.find(x => x.APIName === 'Resource');
       const actionTypeValues = values.find(x => x.APIName === 'ActionType');
       const userUalues = values.find(x => x.APIName === 'UserUUID');
@@ -135,12 +140,11 @@ export class AuditDataLogComponent implements OnInit {
       };
       const operators: PepSmartFilterOperatorType[] = ['before', 'after', 'today', 'thisWeek', 'thisMonth', 'dateRange', 'on', 'inTheLast'];
       this.fields = [
-        createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators }, 'date-time'),
-        createSmartFilterField({ id: 'ActionType', name: 'Type', options: actionstypesOptions }, 'multi-select'),
+        createSmartFilterField({ id: 'AddonUUID', name: 'Addon', options: addons }, 'multi-select'),
         createSmartFilterField({ id: 'Resource', name: 'Resource', options: resources }, 'multi-select'),
         createSmartFilterField({ id: 'UserUUID', name: 'User', options: users }, 'multi-select'),
-        createSmartFilterField({ id: 'AddonUUID', name: 'Addon', options: addons }, 'multi-select'),
-
+        createSmartFilterField({ id: 'ActionType', name: 'Type', options: actionstypesOptions }, 'multi-select'),
+        createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators }, 'date-time'),
       ];
     })
   }
@@ -257,11 +261,11 @@ export class AuditDataLogComponent implements OnInit {
       FieldType: FIELD_TYPE.RichTextHTML,
       Enabled: false
     };
-    const href = window.location.origin + '/settings/' + this.addonService.addonUUID + '/cloud-watch-logs';
+    const href = window.location.origin + '/settings/' + this.addonService.addonUUID + '/logs';
 
     switch (key) {
       case "ID":
-        dataRowField.ColumnWidth = 5;
+        dataRowField.ColumnWidth = 3;
         const operationStr = `<a href="${href}?action_uuid=${document.ActionUUID}&action_date_time=${document.ObjectModificationDateTime}"
         target="_blank" rel="noopener noreferrer"><span class="short-span">${document.ActionUUID}</span></a>`
         dataRowField.FormattedValue = dataRowField.Value = operationStr;
@@ -315,7 +319,7 @@ export class AuditDataLogComponent implements OnInit {
     if (updatedFields) {
       str += '<div class="updated-fields">'
       for (const updateField of updatedFields) {
-        str += 
+        str +=
           `<div class="updated-field"> 
             <p><b>${updateField.FieldID}</b></p>
             <div class="updated-field__item">
@@ -365,8 +369,10 @@ export class AuditDataLogComponent implements OnInit {
       }
     }
     this.filtersStr = filters.join(' and ');
-    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).then((docs) => {
+    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.loadDataLogsList(docs);
+      this.loadSmartFilters();
+
     });
     debugger;
     console.log(JSON.stringify(filtersData))
@@ -383,8 +389,9 @@ export class AuditDataLogComponent implements OnInit {
 
   onSearchChanged(search: any) {
     this.searchString = search.value;
-    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).then((docs) => {
+    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.loadDataLogsList(docs);
+      this.loadSmartFilters();
     })
     console.log(search);
     debugger;

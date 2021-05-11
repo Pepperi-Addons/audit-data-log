@@ -89,43 +89,45 @@ export default class QueryUtil {
     }
 
     static buildWhereClauseByDateField(filter) {
-        let whereClause = '';
+        const dateRange = QueryUtil.getStartAndEndDateTimeByFilter(filter);
+        const whereClause = `ObjectModificationDateTime>=${dateRange.StartDateTime.toISOString()} and ObjectModificationDateTime<=${dateRange.EndDateTime.toISOString()}`;
+        return whereClause;
+    }
 
-        var now = new Date()
+    static getStartAndEndDateTimeByFilter(filter) {
+        let now = new Date();
+        let startDateTime;
+        let endDateTime = new Date();
 
         switch (filter.operator.id) {
             case 'today':
                 var start = new Date();
                 start.setHours(0, 0, 0, 0);
-                whereClause = `ObjectModificationDateTime>=${start.toISOString()} and ObjectModificationDateTime<=${now.toISOString()}`;
+                startDateTime = start;
                 break;
             case 'thisWeek':
-                var previousWeek = new Date(new Date(now).setDate(now.getDate() - 7));
-                whereClause = `ObjectModificationDateTime>=${previousWeek.toISOString()} and ObjectModificationDateTime<=${now.toISOString()}`;
+                startDateTime = new Date(new Date(now).setDate(now.getDate() - 7));
                 break;
             case 'thisMonth':
-                var previousMonth = new Date(new Date(now).setMonth(now.getMonth() - 1));
-                whereClause = `ObjectModificationDateTime>=${previousMonth.toISOString()} and ObjectModificationDateTime<=${now.toISOString()}`;
-                break;
-            case 'on':
-                whereClause = `ObjectModificationDateTime=${filter.value.first}`;
-                break;
-            case 'dateRange':
-                whereClause = `ObjectModificationDateTime>=${filter.value.first} and ObjectModificationDateTime<=${filter.value.second}`;
+                startDateTime = new Date(new Date(now).setMonth(now.getMonth() - 1));
                 break;
             case 'after':
-                var previousMonth = new Date(new Date(now).setMonth(now.getMonth() - 1));
-                whereClause = `ObjectModificationDateTime>=${filter.value.first}`;
-                break;
-            case 'before':
-                whereClause = `ObjectModificationDateTime<=${filter.value.first}`;
+                startDateTime = new Date(new Date(now).setMonth(now.getMonth() - 1));
                 break;
             case 'inTheLast':
-                var startDate = this.calculateStartDate(filter)
-                whereClause = `ObjectModificationDateTime>=${startDate} and ObjectModificationDateTime<=${now.toISOString()}`;
+                startDateTime = this.calculateStartDate(filter);
                 break;
+            case 'on':
+            case 'before':
+                startDateTime = new Date(filter.value.first);
+                break;
+            case 'dateRange':
+                startDateTime = new Date(filter.value.first);
+                endDateTime = new Date(filter.value.second);
+                break;
+
         }
-        return whereClause;
+        return { StartDateTime: startDateTime, EndDateTime: endDateTime };
     }
 
     static calculateStartDate(filter) {

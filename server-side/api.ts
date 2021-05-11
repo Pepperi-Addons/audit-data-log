@@ -151,7 +151,12 @@ export async function audit_data_logs(client: Client, request: Request) {
 };
 
 export async function filters(client: Client, request: Request) {
+    // https://papi.pepperi.com/v1.0/open_catalog/filters?where={where}&search_string={searchString}&
+    // search_string_fields={fields}&fields={fields}&distinct_fields={distinctFields}
     const distinct_fields = request.query.distinct_fields ? request.query.distinct_fields.replace(" ", "").split(",") : undefined;
+    const where = request.query.where ? request.query.where.split(" and ") : undefined;
+    const search_string = request.query.search_string;
+    const search_string_fields = request.query.search_string_fields ? request.query.search_string_fields.replace(" ", "").split(",") : undefined;
 
     const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
     const method = 'POST';
@@ -169,6 +174,16 @@ export async function filters(client: Client, request: Request) {
         },
         "aggs": {}
     };
+
+    if (search_string) {
+        if (search_string_fields) {
+            body["query"]["bool"]["must"].push({ "query_string": { "query": "*" + search_string + "*", "fields": search_string_fields, "type": "most_fields" } });
+        }
+        else {
+            body["query"]["bool"]["must"].push({ "query_string": { "query": "*" + search_string + "*", "type": "most_fields" } });
+        }
+    }
+
     const listPromises: Promise<any>[] = new Array();
     let filters = new Array();
     let newBody;
@@ -177,13 +192,17 @@ export async function filters(client: Client, request: Request) {
     let unselectedFields = new Array();
     distinct_fields.forEach(field => {
         newBody = JSON.parse(JSON.stringify(body));
-
-        newBody["aggs"][field.replace(".Value", "")] = {
-            "terms": { "script": `params._source['${field}']`, "size": 100, "order": { "_term": "asc" } }
-        };
-        QueryUtil.convertWhereToQuery(newWhere, newBody);
-        listPromises.push(callElasticSearchLambda(endpoint, method, JSON.stringify(newBody)));
-
+        newWhere = where ? JSON.parse(JSON.stringify(where.filter(x => !x.includes(field)))) : undefined;
+        if (newWhere == where || newWhere.length == where.length) {
+            unselectedFields.push(field);
+        }
+        else {
+            newBody["aggs"][field.replace(".Value", "")] = {
+                "terms": { "script": `params._source['${field}']`, "size": 100, "order": { "_term": "asc" } }
+            };
+            QueryUtil.convertWhereToQuery(newWhere, newBody);
+            listPromises.push(callElasticSearchLambda(endpoint, method, JSON.stringify(newBody)));
+        }
     });
 
     if (unselectedFields.length > 0) {
@@ -191,6 +210,7 @@ export async function filters(client: Client, request: Request) {
         unselectedFields.forEach(field => {
             newBody["aggs"][field.replace(".Value", "")] = { "terms": { "script": `params._source['${field}']`, "size": 100, "order": { "_term": "asc" } } };
         });
+        QueryUtil.convertWhereToQuery(where, newBody);
         listPromises.push(callElasticSearchLambda(endpoint, method, JSON.stringify(newBody)));
     }
 
@@ -236,6 +256,7 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
     console.log('APIAddon start getAddonsUsageFromCWL');
     const actionUUID = request.query.action_uuid;
     const addonUUID = request.query.addon_uuid;
+    const searchString = request.query.search_string;
 
     try {
         const AWS = require('aws-sdk');
@@ -251,10 +272,13 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
 
         let filter = `DistributorUUID='${distributorUUID}'`;
         if (actionUUID) {
-            filter += ` and ActionUUID=${actionUUID}`;
+            filter += ` and ActionUUID='${actionUUID}'`;
         }
         if (addonUUID) {
-            filter += ` and addonUUID=${addonUUID}`;
+            filter += ` and AddonUUID='${addonUUID}'`;
+        }
+        if (searchString) {
+            filter += ` Message like /${searchString}/`;
         }
         // the query returns the count and duration of api calls per addon on this time range 
         const startQueryParams = {
