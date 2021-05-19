@@ -10,6 +10,7 @@ import QueryUtil from '../shared/utilities/query-util'
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
 
+    const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     console.log("start write data log to elastic search");
     const service = new MyService(client);
     const body = request.body;
@@ -26,6 +27,7 @@ export async function write_data_log_to_elastic_search(client: Client, request: 
             ActionUUID: body.Message.ActionUUID,
             AddonUUID: body.FilterAttributes.AddonUUID,
             ObjectKey: object.ObjectKey,
+            DistributorUUID: distributorUUID,
             ObjectModificationDateTime: object.ObjectModificationDateTime,
             CreationDateTime: dateString,
             UserUUID: body.FilterAttributes.UserUUID,
@@ -74,7 +76,8 @@ export async function post_to_elastic_search(client: Client, request: Request) {
 }
 
 export async function audit_data_logs(client: Client, request: Request) {
-    console.log("f1 start audit_data_log/items");
+
+    const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     const include_count = request.query.include_count ? request.query.include_count : false;
     const fields = request.query.fields ? request.query.fields.replace(" ", "").split(",") : undefined;
     const page = request.query.page ? (request.query.page > 0 ? request.query.page - 1 : 0) : 0;
@@ -86,7 +89,8 @@ export async function audit_data_logs(client: Client, request: Request) {
         page_size = 10000;
     }
     const from = page * page_size;
-    const where = request.query.where ? request.query.where.split(" and ") : undefined;
+    let where: string[] = request.query.where ? request.query.where.split(" and ") : [];
+    where.push(`DistributorUUID=${distributorUUID}`);
     const search_string = request.query.search_string;
     const search_string_fields = request.query.search_string_fields ? request.query.search_string_fields.replace(" ", "").split(",") : undefined;
     const order_by = request.query.order_by ? request.query.order_by.split(" ") : undefined;
@@ -151,10 +155,12 @@ export async function audit_data_logs(client: Client, request: Request) {
 };
 
 export async function filters(client: Client, request: Request) {
-    // https://papi.pepperi.com/v1.0/open_catalog/filters?where={where}&search_string={searchString}&
-    // search_string_fields={fields}&fields={fields}&distinct_fields={distinctFields}
+
+    const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     const distinct_fields = request.query.distinct_fields ? request.query.distinct_fields.replace(" ", "").split(",") : undefined;
-    const where = request.query.where ? request.query.where.split(" and ") : undefined;
+    const where = request.query.where ? request.query.where.split(" and ") : [];
+    where.push(`DistributorUUID=${distributorUUID}`);
+
     const search_string = request.query.search_string;
     const search_string_fields = request.query.search_string_fields ? request.query.search_string_fields.replace(" ", "").split(",") : undefined;
 
@@ -254,37 +260,21 @@ export async function totals(client: Client, request: Request) {
 export async function get_logs_from_cloud_watch(client: Client, request: Request) {
     // return query response of a this query to cloud watch
     console.log('APIAddon start getAddonsUsageFromCWL');
-    const actionUUID = request.query.action_uuid;
-    const addonUUID = request.query.addon_uuid;
-    const searchString = request.query.search_string;
 
     try {
         const AWS = require('aws-sdk');
         const cwl = new AWS.CloudWatchLogs();
 
-        // query params
-        const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
-        const logGroupsParams = {};
-        const logGroups = (await cwl.describeLogGroups(logGroupsParams).promise()).logGroups;
-        const relevantLogGroups = logGroups.filter(x => x.logGroupName.includes('Addon') && x.logGroupName.includes('Execute')).map(x => x.logGroupName);
-        const startTime = new Date(request.body.StartDateTime).getTime(); // on format 
+        const relevantLogGroups = await getLogGroups();
+        const startTime = new Date(request.body.StartDateTime).getTime();
         const endTime = new Date(request.body.EndDateTime).getTime();
 
-        let filter = `DistributorUUID='${distributorUUID}'`;
-        if (actionUUID) {
-            filter += ` and ActionUUID='${actionUUID}'`;
-        }
-        if (addonUUID) {
-            filter += ` and AddonUUID='${addonUUID}'`;
-        }
-        if (searchString) {
-            filter += ` Message like /${searchString}/`;
-        }
-        // the query returns the count and duration of api calls per addon on this time range 
+        let filter = buildInsightFilter(client, request);
+        // the query returns the count and duration of api calls per addon on this time range
         const startQueryParams = {
             startTime: startTime,
             endTime: endTime,
-            queryString: `fields @timestamp, Message
+            queryString: `fields @timestamp, Message, Level, Source
             | sort @timestamp desc
             | filter ${filter}`,
             logGroupNames: relevantLogGroups
@@ -294,16 +284,66 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
         const queryId = (await cwl.startQuery(startQueryParams).promise()).queryId;
 
         // get query results
-        const queryResultsParams = {
-            queryId: queryId
-        };
-        let queryResults = await cwl.getQueryResults(queryResultsParams).promise();
-        while (queryResults.status != 'Complete') {
-            await sleep(1000);
-            queryResults = await cwl.getQueryResults(queryResultsParams).promise();
-        }
+        let queryResults = await getQueryResults(queryId, cwl);
 
         return queryResults;
+    }
+    catch (err) {
+        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
+        return err;
+    }
+};
+
+export async function get_stats_from_cloud_watch(client: Client, request: Request) {
+    // return query response of a this query to cloud watch
+    try {
+        const AWS = require('aws-sdk');
+        const cwl = new AWS.CloudWatchLogs();
+
+        // query params
+        const relevantLogGroups = await getLogGroups();
+        const startTime = new Date(request.body.StartDateTime).getTime(); // on format
+        const endTime = new Date(request.body.EndDateTime).getTime();
+        const distinctFields = request.query.distinct_field;
+
+        let filter = buildInsightFilter(client, request);
+        // the query returns the count and duration of api calls per addon on this time range
+        const startQueryParams = {
+            startTime: startTime,
+            endTime: endTime,
+            queryString: `fields @timestamp, Message, Level, Source
+            | sort @timestamp desc
+            | filter ${filter}
+            | stats count() as count by ${distinctFields}`,
+            logGroupNames: relevantLogGroups
+        };
+        console.log(`startQueryParams: ${JSON.stringify(startQueryParams)}`)
+
+        const queryId = (await cwl.startQuery(startQueryParams).promise()).queryId;
+
+        // get query results
+        let queryResults = await getQueryResults(queryId, cwl);
+        const stats = {};
+        distinctFields.split(',').forEach(distinctField => {
+            stats[distinctField] = {};
+        });
+
+        queryResults.results.forEach(res => {
+            Object.keys(stats).forEach((key) => {
+                let distValue = res.find(x => x.field == key)?.value;
+                let distCount = res.find(x => x.field == 'count')?.value;
+                if (distValue && distCount) {
+                    if (Object.keys(stats[key]).indexOf(distValue) > -1) {
+                        stats[key][distValue] += parseInt(distCount);
+                    }
+                    else {
+                        stats[key][distValue] = parseInt(distCount);
+                    }
+                }
+            });
+        });
+
+        return stats;
     }
     catch (err) {
         console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
@@ -314,3 +354,56 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
 const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 };
+
+
+async function getQueryResults(queryId: any, cwl: any) {
+    const queryResultsParams = {
+        queryId: queryId
+    };
+    let queryResults = await cwl.getQueryResults(queryResultsParams).promise();
+    while (queryResults.status != 'Complete') {
+        await sleep(500);
+        queryResults = await cwl.getQueryResults(queryResultsParams).promise();
+    }
+    return queryResults;
+}
+
+async function getLogGroups() {
+    const logGroups = [
+        '/aws/lambda/AddonsExecuteJavaScriptLambdaAsync',
+        '/aws/lambda/ExecuteAddon',
+        '/aws/lambda/ExecuteAddonAdminSync',
+        '/aws/lambda/ExecuteAddonAdminSyncByVersion',
+        '/aws/lambda/ExecuteAddonByVersion',
+        '/aws/lambda/ExecuteAddonSync',
+        '/aws/lambda/ExecuteAddonSyncByVersion',
+        'Nuclues',
+        'ApiInternal'
+    ];
+
+    return logGroups;
+}
+
+function buildInsightFilter(client: Client, request: Request) {
+    const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
+    const distributorID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributorid"];
+
+    const actionUUID = request.query.action_uuid;
+    const Level = request.query.level;
+    const addonUUID = request.query.addon_uuid;
+    const searchString = request.query.search_string
+    let filter = `(DistributorUUID='${distributorUUID}' OR DistributorID='${distributorID}')`;
+    if (Level) {
+        filter += ` and Level in [${Level}]`;
+    }
+    if (actionUUID) {
+        filter += ` and ActionUUID='${actionUUID}'`;
+    }
+    if (addonUUID) {
+        filter += ` and AddonUUID='${addonUUID}'`;
+    }
+    if (searchString) {
+        filter += ` and (Message like /(?i)${searchString}/ OR Level like /(?i)${searchString}/)`;
+    }
+    return filter;
+}

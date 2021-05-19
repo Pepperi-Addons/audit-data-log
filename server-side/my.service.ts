@@ -8,7 +8,9 @@ class MyService {
     constructor(private client: Client) {
         this.papiClient = new PapiClient({
             baseURL: client.BaseURL,
-            token: client.OAuthAccessToken
+            token: client.OAuthAccessToken,
+            addonSecretKey: client.AddonSecretKey,
+            addonUUID: client.AddonUUID
         });
     }
 

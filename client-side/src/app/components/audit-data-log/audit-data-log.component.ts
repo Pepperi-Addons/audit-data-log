@@ -6,9 +6,9 @@ import { DEFAULT_PAGE_SIZE, IPepListPagerChangeEvent, IPepListSortingChangeEvent
 import { AddonService } from '../addon/addon.service';
 import { Document, UpdatedField } from '../../../../../shared/models/document'
 import moment from 'moment';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { createSmartFilter, createSmartFilterField, PepSmartFilterOperatorType } from '@pepperi-addons/ngx-lib/smart-filters';
-
+import { Location } from '@angular/common';
 import {
   IPepSmartFilterField,
   IPepSmartFilterData,
@@ -23,11 +23,14 @@ import { pepIconArrowRightAlt } from '@pepperi-addons/ngx-lib/icon';
 import { disableDebugTools } from '@angular/platform-browser';
 import QueryUtil from '../../../../../shared/utilities/query-util';
 import { IPepFormFieldClickEvent } from '@pepperi-addons/ngx-lib/form';
+import { data } from 'jquery';
+import { NIL as NIL_UUID } from 'uuid';
+import jwtDecode from 'jwt-decode';
+
 @Component({
   selector: 'addon-audit-data-log',
   templateUrl: './audit-data-log.component.html',
   styleUrls: ['./audit-data-log.component.scss'],
-
 })
 export class AuditDataLogComponent implements OnInit {
   @ViewChild(PepListComponent) customConflictList: PepListComponent;
@@ -60,6 +63,9 @@ export class AuditDataLogComponent implements OnInit {
   constructor(public translate: TranslateService,
     private dataConvertorService: PepDataConvertorService,
     private addonService: AddonService,
+    private location: Location,
+
+    private router: Router,
     public routeParams: ActivatedRoute) {
     this.searchStringFields = 'ActionUUID,ObjectKey,UpdatedFields.FieldID,UpdatedFields.NewValue,UpdatedFields.OldValue';
     this.addonService.addonUUID = this.routeParams.snapshot.params['addon_uuid'];
@@ -76,6 +82,7 @@ export class AuditDataLogComponent implements OnInit {
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.docs = docs;
       this.loadDataLogsList(docs);
+
     });
   }
 
@@ -99,20 +106,21 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   private loadSmartFilters(): void {
-    const resources: IPepSmartFilterFieldOption[] = [];
+    const resourceOptuins: IPepSmartFilterFieldOption[] = [];
     const actionstypesOptions: IPepSmartFilterFieldOption[] = [];
-    const users: IPepSmartFilterFieldOption[] = [];
-    const addons: IPepSmartFilterFieldOption[] = [];
+    const userOptions: IPepSmartFilterFieldOption[] = [];
+    const addonOptions: IPepSmartFilterFieldOption[] = [];
 
     const distinctValues = 'Resource,ActionType,UserUUID,AddonUUID';
     this.addonService.audit_data_log_distinct_values(this.searchString, this.filtersStr, this.searchStringFields, distinctValues).subscribe(async (values) => {
+
       const resourceValues = values.find(x => x.APIName === 'Resource');
       const actionTypeValues = values.find(x => x.APIName === 'ActionType');
       const userUalues = values.find(x => x.APIName === 'UserUUID');
       const addonValues = values.find(x => x.APIName === 'AddonUUID');
 
       resourceValues.Values.forEach(resourceValue => {
-        resources.push({ value: resourceValue.key, count: resourceValue.doc_count });
+        resourceOptuins.push({ value: resourceValue.key, count: resourceValue.doc_count });
       });
       actionTypeValues.Values.forEach(actionTypeValue => {
         actionstypesOptions.push({ value: actionTypeValue.key, count: actionTypeValue.doc_count });
@@ -120,32 +128,39 @@ export class AuditDataLogComponent implements OnInit {
 
       addonValues.Values.forEach(addon => {
         const addonObject = this.addons.find(a => a.UUID === addon.key);
-        addons.push({ value: addonObject.Name, count: addon.doc_count });
+        addonOptions.push({ value: addonObject.Name, count: addon.doc_count });
       });
+
       for (let user of userUalues.Values) {
         let userDetails = this.users.find(u => u.UUID === user.key);
-        let email = '';
-        if (userDetails) {
-          email = userDetails.Email;
-        }
-        else {
-          // support admin user doesnt returned in 'users' api
-          const userDetails = await this.addonService.getUserBuUUID(user.key);
-          if (userDetails) {
-            this.users.push({ UUID: userDetails.UUID, Email: 'Pepperi Admin', InternalID: userDetails.InternalID });
-          }
-          email = 'Pepperi Admin'
-        }
-        users.push({ value: email, count: user.doc_count });
+        let email = userDetails ? userDetails.Email : 'Pepperi Admin'
+        userOptions.push({ value: email, count: user.doc_count });
       };
       const operators: PepSmartFilterOperatorType[] = ['before', 'after', 'today', 'thisWeek', 'thisMonth', 'dateRange', 'on', 'inTheLast'];
-      this.fields = [
-        createSmartFilterField({ id: 'AddonUUID', name: 'Addon', options: addons }, 'multi-select'),
-        createSmartFilterField({ id: 'Resource', name: 'Resource', options: resources }, 'multi-select'),
-        createSmartFilterField({ id: 'UserUUID', name: 'User', options: users }, 'multi-select'),
-        createSmartFilterField({ id: 'ActionType', name: 'Type', options: actionstypesOptions }, 'multi-select'),
-        createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators }, 'date-time'),
-      ];
+      if (!this.fields) {
+        this.fields = [
+          createSmartFilterField({ id: 'AddonUUID', name: 'Addon', options: addonOptions }, 'multi-select'),
+          createSmartFilterField({ id: 'Resource', name: 'Resource', options: resourceOptuins }, 'multi-select'),
+          createSmartFilterField({ id: 'UserUUID', name: 'User', options: userOptions }, 'multi-select'),
+          createSmartFilterField({ id: 'ActionType', name: 'Type', options: actionstypesOptions }, 'multi-select'),
+          createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators }, 'date-time'),
+        ];
+      }
+      else {
+        let addonUUIDFilter = this.fields?.find(filter => filter.id == 'AddonUUID');
+        let resourceFilter = this.fields?.find(filter => filter.id == 'Resource');
+        let userUUIDFilter = this.fields?.find(filter => filter.id == 'UserUUID');
+        let actionTypeFilter = this.fields?.find(filter => filter.id == 'ActionType');
+        let actionDateTimeFilter = this.fields?.find(filter => filter.id == 'ActionDateTime');
+
+        this.fields = [
+          createSmartFilterField({ id: 'AddonUUID', name: 'Addon', options: addonOptions, isOpen: addonUUIDFilter.isOpen }, 'multi-select'),
+          createSmartFilterField({ id: 'Resource', name: 'Resource', options: resourceOptuins, isOpen: resourceFilter.isOpen }, 'multi-select'),
+          createSmartFilterField({ id: 'UserUUID', name: 'User', options: userOptions, isOpen: userUUIDFilter.isOpen }, 'multi-select'),
+          createSmartFilterField({ id: 'ActionType', name: 'Type', options: actionstypesOptions, isOpen: actionTypeFilter.isOpen }, 'multi-select'),
+          createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators, isOpen: actionDateTimeFilter.isOpen }, 'date-time'),
+        ];
+      }
     })
   }
 
@@ -261,14 +276,17 @@ export class AuditDataLogComponent implements OnInit {
       FieldType: FIELD_TYPE.RichTextHTML,
       Enabled: false
     };
-    const href = window.location.origin + '/settings/' + this.addonService.addonUUID + '/logs';
-
+    const user = this.users.find(u => u.UUID === document.UserUUID);
+    const email = user ? user.Email : 'Pepperi Admin';
+    const href = 'settings/' + this.addonService.addonUUID + '/logs';
+    //target="_blank" rel="noopener noreferrer"
     switch (key) {
       case "ID":
         dataRowField.ColumnWidth = 3;
-        const operationStr = `<a href="${href}?action_uuid=${document.ActionUUID}&action_date_time=${document.ObjectModificationDateTime}"
-        target="_blank" rel="noopener noreferrer"><span class="short-span">${document.ActionUUID}</span></a>`
-        dataRowField.FormattedValue = dataRowField.Value = operationStr;
+        const actionUuid = document.ActionUUID === NIL_UUID ? '' : document.ActionUUID;
+        const actionUuidHtml = `<span class="custom-span">${actionUuid}</span>`;
+        const operationStr = `<a href="${href}?action_uuid=${document.ActionUUID}&action_date_time=${document.CreationDateTime}&addon_uuid=${document.AddonUUID}&user=${email}">${actionUuidHtml}</span></a>`
+        dataRowField.FormattedValue = dataRowField.Value = this.addonService.isSupportAdminUser ? operationStr : actionUuidHtml;
         break;
       case "Type":
         dataRowField.ColumnWidth = 3;
@@ -276,17 +294,15 @@ export class AuditDataLogComponent implements OnInit {
         dataRowField.FormattedValue = dataRowField.Value = actionType;
         break;
       case "ObjectKey":
-        dataRowField.ColumnWidth = 5;
-        dataRowField.FormattedValue = dataRowField.Value = document.ObjectKey;
+        dataRowField.ColumnWidth = 3;
+        dataRowField.FormattedValue = dataRowField.Value = `<span class="custom-span">${document.ObjectKey}</span>`;
         break;
       case "Resource":
-        dataRowField.ColumnWidth = 7;
+        dataRowField.FieldType = FIELD_TYPE.RichTextHTML;
+        dataRowField.ColumnWidth = 6;
         let addon = this.addons.find(x => x.UUID === document.AddonUUID);
-        const typeStr = `${addon.Name}: ${document.Resource}`
-        const resourceStr = `<a href="${href}?addon_uuid=${addon.UUID}&action_date_time=${document.ObjectModificationDateTime}"
-        target="_blank" rel="noopener noreferrer"><span class="short-span">${typeStr}</span></a>`
-        dataRowField.FormattedValue = dataRowField.Value = resourceStr;
-
+        const typeStr = `<a href="${href}?addon_uuid=${document.AddonUUID}"><span class="color-link ng-star-inserted">${addon.Name}: </span></a><span>${document.Resource}</span>`
+        dataRowField.FormattedValue = dataRowField.Value = this.addonService.isSupportAdminUser ? typeStr : document.Resource;
         break;
       case "UpdatedFields":
         const updateFieldStr = this.buildUpdatedFieldsTable(document.UpdatedFields);
@@ -294,7 +310,6 @@ export class AuditDataLogComponent implements OnInit {
         break;
       case "User":
         dataRowField.ColumnWidth = 5;
-        const user = this.users.find(u => u.UUID === document.UserUUID);
         const userStr = `${user?.Email} (${user?.InternalID})`;
         dataRowField.FormattedValue = dataRowField.Value = userStr;
         document.UserEmail = user?.Email;
@@ -313,7 +328,9 @@ export class AuditDataLogComponent implements OnInit {
     }
     return dataRowField;
   }
-
+  onClick(event: Event) {
+    debugger;
+  }
   private buildUpdatedFieldsTable(updatedFields: UpdatedField[]): string {
     let str = '';
     if (updatedFields) {
@@ -397,6 +414,14 @@ export class AuditDataLogComponent implements OnInit {
     debugger;
   }
   onCustomizeFieldClick(fieldClickEvent: IPepFormFieldClickEvent) {
+    let href = `/settings/${this.addonService.addonUUID}/logs?`;
+    if (fieldClickEvent.key === 'Resource') {
+      href += `addon_uuid=${fieldClickEvent.value}`
+    } if (fieldClickEvent.key === 'ID') {
+      href += `action_uuid=${fieldClickEvent.value}`
+    }
+
+    this.location.replaceState(href);
     debugger;
   }
 

@@ -56,6 +56,7 @@
     "single-spa-angular": "^4.9.2",
     "single-spa-angular-webpack5": "^4.9.3",
     "tslib": "^2.0.0",
+    "uuid": "^8.3.2",
     "zone.js": "^0.11.4"
   },
   "devDependencies": {

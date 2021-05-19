@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { PepCustomizationService, PepLoaderService, PepStyleType } from '@pepperi-addons/ngx-lib';
+import { AddonService } from './components/addon/addon.service';
 
 declare var CLIENT_MODE: any;
 
 @Component({
     selector: 'addon-root',
     templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss']
+    styleUrls: ['./app.component.scss'],
+    providers: [AddonService]
 })
 export class AppComponent implements OnInit {
     footerHeight: number;
@@ -21,7 +23,7 @@ export class AppComponent implements OnInit {
             .subscribe((show) => {
                 this.showLoading = show;
             });
-            this.clientMode = CLIENT_MODE;
+        this.clientMode = CLIENT_MODE;
     }
 
     ngOnInit() {

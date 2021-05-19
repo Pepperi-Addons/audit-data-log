@@ -9,26 +9,30 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from '@pepperi-addons/debug-server'
+import { Subscription } from '@pepperi-addons/papi-sdk';
 import MyService from './my.service';
 
 export async function install(client: Client, request: Request): Promise<any> {
     const service = new MyService(client);
-    let subscriptionBody = {
-        AddonPath:'api',
-        FunctionName:'write_data_log_to_elastic_search',
+    let subscriptionBody: Subscription = {
+        AddonRelativeURL: '/api/write_data_log_to_elastic_search',
+        AddonUUID: client.AddonUUID,
+        Name: 'AuditDateLog',
+        Type: 'data',
+        Key: 'AuditDataLog'
     };
-    //await service.papiClient.notifications.subscriptions(subscriptionBody);
-    return {success:true,resultObject:{}}
+    const res = await service.papiClient.notification.subscriptions.upsert(subscriptionBody);
+    return { success: true, resultObject: {} }
 }
 
 export async function uninstall(client: Client, request: Request): Promise<any> {
-    return {success:true,resultObject:{}}
+    return { success: true, resultObject: {} }
 }
 
 export async function upgrade(client: Client, request: Request): Promise<any> {
-    return {success:true,resultObject:{}}
+    return { success: true, resultObject: {} }
 }
 
 export async function downgrade(client: Client, request: Request): Promise<any> {
-    return {success:true,resultObject:{}}
+    return { success: true, resultObject: {} }
 }

@@ -36,11 +36,21 @@
                 }
             }
         }
-        .short-span{
-            white-space: nowrap;
-            overflow: hidden;
+        .custom-span{
+            display: block;
+            text-anchor: end;
+            box-sizing: border-box;
+            -ms-text-overflow: ellipsis;
             text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            width: 100%;
+
         }
+        .card-flex-container{
+            display: block;
+        }
+
     }
 }
 // .list-wrapper {

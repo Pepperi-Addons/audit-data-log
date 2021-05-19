@@ -9,7 +9,7 @@ import {
     PepSessionService
 } from '@pepperi-addons/ngx-lib';
 import { PepDialogActionButton, PepDialogData, PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
-import { Observable } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 // import { PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
 // import {AddonUUID} from '../../../../../addon.config.json';
 @Injectable({ providedIn: 'root' })
@@ -18,6 +18,9 @@ export class AddonService {
     parsedToken: any
     papiBaseURL = ''
     addonUUID;
+    isSupportAdminUser: boolean = true;
+
+
 
     get papiClient(): PapiClient {
         return new PapiClient({
@@ -39,6 +42,7 @@ export class AddonService {
         const accessToken = this.session.getIdpToken();
         this.parsedToken = accessToken ? jwt(accessToken) : {};
         this.papiBaseURL = this.parsedToken["pepperi.baseurl"];
+        this.isSupportAdminUser = this.parsedToken["email"].startsWith("SupportAdminUser");
     }
 
     async getExecutionLog(executionUUID): Promise<AuditLog> {
@@ -106,19 +110,8 @@ export class AddonService {
         );
     }
 
-
-    cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, search_string: string) {
-        let params = {};
-        if (addon_uuid) {
-            params[`addon_uuid`] = addon_uuid;;
-        }
-        if (action_uuid) {
-            params[`action_uuid`] = action_uuid;
-        }
-        if (search_string) {
-            params[`search_string`] = search_string;
-        }
-
+    cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, search_string: string, level: string) {
+        let params = this.buildCloudWatchParams(addon_uuid, action_uuid, search_string, level);
         const body = {
             StartDateTime: start_data.toUTCString(),
             EndDateTime: end_data.toUTCString()
@@ -131,6 +124,40 @@ export class AddonService {
             { params: params },
             false
         );
+    }
+
+    cloud_watch_logs_stats(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, search_string: string, distinct_field: string, levels: string) {
+        let params = this.buildCloudWatchParams(addon_uuid, action_uuid, search_string, levels);
+        params['distinct_field'] = distinct_field;
+        const body = {
+            StartDateTime: start_data.toUTCString(),
+            EndDateTime: end_data.toUTCString()
+        };
+        return this.addonService.postAddonApiCall(
+            this.addonUUID,
+            'api',
+            'get_stats_from_cloud_watch',
+            body,
+            { params: params },
+            false
+        );
+    }
+    private buildCloudWatchParams(addon_uuid: string, action_uuid: string, search_string: string, level: string) {
+        let params = {};
+        // TODO - remove when the nucules will be real addon
+        if (addon_uuid && addon_uuid != '00000000-0000-0000-0000-00000000c07e') {
+            params[`addon_uuid`] = addon_uuid;;
+        }
+        if (action_uuid) {
+            params[`action_uuid`] = action_uuid;
+        }
+        if (search_string) {
+            params[`search_string`] = search_string;
+        }
+        if (level) {
+            params[`level`] = level;
+        }
+        return params;
     }
 
     openDialog(title: string, content: string, callback?: any) {

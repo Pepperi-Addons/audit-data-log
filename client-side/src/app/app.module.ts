@@ -9,6 +9,7 @@ import { PepUIModule } from './modules/pepperi.module';
 import { MaterialModule } from './modules/material.module';
 import { AddonModule } from './components/addon/index';
 import { CloudWatchLogsComponent } from './components/cloud-watch-logs/cloud-watch-logs.component';
+import { AddonService } from './components/addon/addon.service';
 
 @NgModule({
     declarations: [
