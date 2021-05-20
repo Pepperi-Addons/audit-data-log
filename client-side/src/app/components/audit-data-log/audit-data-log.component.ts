@@ -133,7 +133,11 @@ export class AuditDataLogComponent implements OnInit {
 
       for (let user of userUalues.Values) {
         let userDetails = this.users.find(u => u.UUID === user.key);
-        let email = userDetails ? userDetails.Email : 'Pepperi Admin'
+        let email = userDetails ? userDetails.Email : 'Pepperi Admin';
+        // var admin user doesnt arrive in users api
+        if (!userDetails) {
+          this.users.push({ UUID: user.key, Email: email })
+        }
         userOptions.push({ value: email, count: user.doc_count });
       };
       const operators: PepSmartFilterOperatorType[] = ['before', 'after', 'today', 'thisWeek', 'thisMonth', 'dateRange', 'on', 'inTheLast'];
@@ -165,10 +169,9 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   notifyValueChanged(event) {
-    debugger;
   }
+
   selectedRowsChanged(selectedRowsCount: number) {
-    debugger;
   }
 
   sortingChange(sortingChangeEvent: IPepListSortingChangeEvent) {
@@ -210,11 +213,7 @@ export class AuditDataLogComponent implements OnInit {
         break;
     }
 
-    console.log(`after sort by ${sortingChangeEvent.sortBy} - ascending ${sortingChangeEvent.isAsc}`, this.docs);
-
     this.loadDataLogsList(this.docs);
-
-    debugger;
   }
 
   loadDataLogsList(docs) {
@@ -310,7 +309,11 @@ export class AuditDataLogComponent implements OnInit {
         break;
       case "User":
         dataRowField.ColumnWidth = 5;
-        const userStr = `${user?.Email} (${user?.InternalID})`;
+        const userEmail = user?.Email ? user.Email : 'Pepperi Admin'
+        let userStr = `${userEmail}`;
+        if (user?.InternalID) {
+          userStr += ` (${user?.InternalID})`
+        }
         dataRowField.FormattedValue = dataRowField.Value = userStr;
         document.UserEmail = user?.Email;
         break;
@@ -328,9 +331,10 @@ export class AuditDataLogComponent implements OnInit {
     }
     return dataRowField;
   }
+
   onClick(event: Event) {
-    debugger;
   }
+
   private buildUpdatedFieldsTable(updatedFields: UpdatedField[]): string {
     let str = '';
     if (updatedFields) {
@@ -391,17 +395,13 @@ export class AuditDataLogComponent implements OnInit {
       this.loadSmartFilters();
 
     });
-    debugger;
     console.log(JSON.stringify(filtersData))
   }
 
   onSearchStateChanged(searchStateChangeEvent: IPepSearchStateChangeEvent) {
-    // debugger;
   }
 
   onSearchAutocompleteChanged(value) {
-    console.log(value);
-    // debugger;
   }
 
   onSearchChanged(search: any) {
@@ -410,9 +410,8 @@ export class AuditDataLogComponent implements OnInit {
       this.loadDataLogsList(docs);
       this.loadSmartFilters();
     })
-    console.log(search);
-    debugger;
   }
+
   onCustomizeFieldClick(fieldClickEvent: IPepFormFieldClickEvent) {
     let href = `/settings/${this.addonService.addonUUID}/logs?`;
     if (fieldClickEvent.key === 'Resource') {
@@ -422,7 +421,6 @@ export class AuditDataLogComponent implements OnInit {
     }
 
     this.location.replaceState(href);
-    debugger;
   }
 
   onMenuItemClicked(action: IPepMenuItemClickEvent): void {

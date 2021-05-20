@@ -264,8 +264,11 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
     try {
         const AWS = require('aws-sdk');
         const cwl = new AWS.CloudWatchLogs();
+        let logGroupsNames: string[] = request.query.log_groups ? request.query.log_groups.split(',') : undefined;
 
-        const relevantLogGroups = await getLogGroups();
+        if (!logGroupsNames) {
+            logGroupsNames = getLogGroups();
+        }
         const startTime = new Date(request.body.StartDateTime).getTime();
         const endTime = new Date(request.body.EndDateTime).getTime();
 
@@ -277,7 +280,7 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
             queryString: `fields @timestamp, Message, Level, Source
             | sort @timestamp desc
             | filter ${filter}`,
-            logGroupNames: relevantLogGroups
+            logGroupNames: logGroupsNames
         };
         console.log(`startQueryParams: ${JSON.stringify(startQueryParams)}`)
 
@@ -301,7 +304,11 @@ export async function get_stats_from_cloud_watch(client: Client, request: Reques
         const cwl = new AWS.CloudWatchLogs();
 
         // query params
-        const relevantLogGroups = await getLogGroups();
+        let logGroupsNames: string[] = request.query.log_groups ? request.query.log_groups.split(',') : undefined;
+
+        if (!logGroupsNames) {
+            logGroupsNames = getLogGroups();
+        }
         const startTime = new Date(request.body.StartDateTime).getTime(); // on format
         const endTime = new Date(request.body.EndDateTime).getTime();
         const distinctFields = request.query.distinct_field;
@@ -315,7 +322,7 @@ export async function get_stats_from_cloud_watch(client: Client, request: Reques
             | sort @timestamp desc
             | filter ${filter}
             | stats count() as count by ${distinctFields}`,
-            logGroupNames: relevantLogGroups
+            logGroupNames: logGroupsNames
         };
         console.log(`startQueryParams: ${JSON.stringify(startQueryParams)}`)
 
@@ -368,7 +375,7 @@ async function getQueryResults(queryId: any, cwl: any) {
     return queryResults;
 }
 
-async function getLogGroups() {
+function getLogGroups() {
     const logGroups = [
         '/aws/lambda/AddonsExecuteJavaScriptLambdaAsync',
         '/aws/lambda/ExecuteAddon',
@@ -378,7 +385,8 @@ async function getLogGroups() {
         '/aws/lambda/ExecuteAddonSync',
         '/aws/lambda/ExecuteAddonSyncByVersion',
         'Nuclues',
-        'ApiInternal'
+        'ApiInternal',
+        'WACD'
     ];
 
     return logGroups;
@@ -392,6 +400,8 @@ function buildInsightFilter(client: Client, request: Request) {
     const Level = request.query.level;
     const addonUUID = request.query.addon_uuid;
     const searchString = request.query.search_string
+    const searchStringFields = request.query.search_string_fields ? request.query.search_string_fields.split(',') : ['Message']
+
     let filter = `(DistributorUUID='${distributorUUID}' OR DistributorID='${distributorID}')`;
     if (Level) {
         filter += ` and Level in [${Level}]`;
@@ -403,7 +413,11 @@ function buildInsightFilter(client: Client, request: Request) {
         filter += ` and AddonUUID='${addonUUID}'`;
     }
     if (searchString) {
-        filter += ` and (Message like /(?i)${searchString}/ OR Level like /(?i)${searchString}/)`;
+        const arr: string[] = [];
+        searchStringFields.forEach(searchStringField => {
+            arr.push(`(${searchStringField} like /(?i)${searchString}/)`)
+        });
+        filter += ` and (${arr.join(" OR ")})`;
     }
     return filter;
 }

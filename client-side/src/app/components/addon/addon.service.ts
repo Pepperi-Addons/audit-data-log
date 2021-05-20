@@ -110,8 +110,8 @@ export class AddonService {
         );
     }
 
-    cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, search_string: string, level: string) {
-        let params = this.buildCloudWatchParams(addon_uuid, action_uuid, search_string, level);
+    cloud_watch_logs(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, search_string: string, search_string_fields: string, level: string, logGroups: string) {
+        let params = this.buildCloudWatchParams(addon_uuid, action_uuid, search_string, search_string_fields, level, logGroups);
         const body = {
             StartDateTime: start_data.toUTCString(),
             EndDateTime: end_data.toUTCString()
@@ -126,8 +126,8 @@ export class AddonService {
         );
     }
 
-    cloud_watch_logs_stats(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, search_string: string, distinct_field: string, levels: string) {
-        let params = this.buildCloudWatchParams(addon_uuid, action_uuid, search_string, levels);
+    cloud_watch_logs_stats(start_data: Date, end_data: Date, addon_uuid: string, action_uuid: string, search_string: string, search_string_fields: string, distinct_field: string, levels: string, logGroups: string) {
+        let params = this.buildCloudWatchParams(addon_uuid, action_uuid, search_string, search_string_fields, levels, logGroups);
         params['distinct_field'] = distinct_field;
         const body = {
             StartDateTime: start_data.toUTCString(),
@@ -142,7 +142,7 @@ export class AddonService {
             false
         );
     }
-    private buildCloudWatchParams(addon_uuid: string, action_uuid: string, search_string: string, level: string) {
+    private buildCloudWatchParams(addon_uuid: string, action_uuid: string, search_string: string, search_string_fields: string, level: string, logGroups: string) {
         let params = {};
         // TODO - remove when the nucules will be real addon
         if (addon_uuid && addon_uuid != '00000000-0000-0000-0000-00000000c07e') {
@@ -156,6 +156,12 @@ export class AddonService {
         }
         if (level) {
             params[`level`] = level;
+        }
+        if (logGroups) {
+            params[`log_groups`] = logGroups;
+        }
+        if (search_string_fields) {
+            params[`search_string_fields`] = search_string_fields;
         }
         return params;
     }

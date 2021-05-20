@@ -14,7 +14,7 @@
                 <div class="list-container" #conflictslistContainer>
                     <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
                     </div>
-                    <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="50" [selectionTypeForActions]="'none'" [noDataFoundMsg]="'NO_DATA_FOUND' | translate " (valueChange)="notifyValueChanged($event)" (sortingChange)="sortingChange($event)" (selectedItemsChange)="selectedRowsChanged($event)" (fieldClick)="onCustomizeFieldClick($event)">
+                    <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="50" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found." (valueChange)="notifyValueChanged($event)" (sortingChange)="sortingChange($event)" (selectedItemsChange)="selectedRowsChanged($event)" (fieldClick)="onCustomizeFieldClick($event)">
                     </pep-list>
                 </div>
             </div>

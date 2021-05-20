@@ -21,11 +21,21 @@ export async function install(client: Client, request: Request): Promise<any> {
         Type: 'data',
         Key: 'AuditDataLog'
     };
-    const res = await service.papiClient.notification.subscriptions.upsert(subscriptionBody);
+    await service.papiClient.notification.subscriptions.upsert(subscriptionBody);
     return { success: true, resultObject: {} }
 }
 
 export async function uninstall(client: Client, request: Request): Promise<any> {
+    const service = new MyService(client);
+    let subscriptionBody: Subscription = {
+        AddonRelativeURL: '/api/write_data_log_to_elastic_search',
+        AddonUUID: client.AddonUUID,
+        Name: 'AuditDateLog',
+        Type: 'data',
+        Key: 'AuditDataLog',
+        Hidden: true
+    };
+    await service.papiClient.notification.subscriptions.upsert(subscriptionBody);
     return { success: true, resultObject: {} }
 }
 

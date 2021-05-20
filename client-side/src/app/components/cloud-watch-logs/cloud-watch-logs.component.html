@@ -14,13 +14,13 @@
             <div class="list-container" #PepListDetailsContainer>
                 <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
                 </div>
-                <pep-list #PepListDetails id="listDetails" [selectionTypeForActions]="'none'" [noDataFoundMsg]="'NO_DATA_FOUND' | translate ">
+                <pep-list #PepListDetails id="listDetails" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found.">
                 </pep-list>
             </div>
             <div class="list-container" #PepListLogsContainer>
                 <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
                 </div>
-                <pep-list #PepListLogs id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="70" [selectionTypeForActions]="'none'" [noDataFoundMsg]="'NO_DATA_FOUND' | translate " (sortingChange)="sortingChange($event)">
+                <pep-list #PepListLogs id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="70" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found." (sortingChange)="sortingChange($event)">
                 </pep-list>
             </div>
         </div>

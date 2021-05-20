@@ -11,6 +11,7 @@ import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
 import QueryUtil from '../../../../../shared/utilities/query-util';
 import { PepDialogActionButton, PepDialogData, PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
 import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
+import { forkJoin } from 'rxjs';
 declare var angular: any;
 
 @Component({
@@ -40,6 +41,8 @@ export class CloudWatchLogsComponent implements OnInit {
   auditDataLogs: Document[];
   user: any;
   details: any = '';
+  logGroups: string;
+  searchStringFields: string;
   get showItems() {
     return this._showItems;
   }
@@ -65,25 +68,11 @@ export class CloudWatchLogsComponent implements OnInit {
     private addonService: AddonService,
     public routeParams: ActivatedRoute) {
     this.addonService.addonUUID = this.routeParams.snapshot.params['addon_uuid'];
+    this.searchStringFields = "Message,Level,Source";
   }
 
   ngAfterViewInit(): void {
   }
-
-  // private async getCloudWatchLogsAsync(tart_data: Date, end_data: Date, addon_uuid: string, action_uuid: string) {
-  //   const logsResult = await this.addonService.cloud_watch_logs(tart_data, end_data, addon_uuid, action_uuid, true)
-  //   const condition = (logRes) => {
-  //     return logRes &&
-  //       logRes.Status &&
-  //       logRes.Status.Name !== "InProgress" &&
-  //       logRes.Status.Name !== "InRetry" ?
-  //       false : true;
-  //   }
-  //   this.poll(() => this.addonService.getExecutionLog(logsResult.ExecutionUUID), condition, 1500)
-  //     .then(logRes => {
-  //       this.pollCallback(logRes);
-  //     });
-  // }
 
   sortingChange(sortingChangeEvent: IPepListSortingChangeEvent) {
     switch (sortingChangeEvent.sortBy) {
@@ -94,9 +83,29 @@ export class CloudWatchLogsComponent implements OnInit {
             new Date(b.ActionDateTime).getTime() - new Date(a.ActionDateTime).getTime()
         );
         break;
+      case 'Message':
+        this.docs.sort((a, b) =>
+          sortingChangeEvent.isAsc ?
+            (a.Message > b.Message ? -1 : 1) :
+            (b.Message > a.Message ? -1 : 1)
+        );
+        break;
+      case 'Source':
+        this.docs.sort((a, b) =>
+          sortingChangeEvent.isAsc ?
+            (a.Source > b.Source ? -1 : 1) :
+            (b.Source > a.Source ? -1 : 1)
+        );
+        break;
+      case 'Level':
+        this.docs.sort((a, b) =>
+          sortingChangeEvent.isAsc ?
+            (a.Level > b.Level ? -1 : 1) :
+            (b.Level > a.Level ? -1 : 1)
+        );
+        break;
     }
 
-    console.log(`after sort by ${sortingChangeEvent.sortBy} - ascending ${sortingChangeEvent.isAsc}`, this.docs);
 
     this.loadDataLogsList(this.docs);
 
@@ -131,7 +140,8 @@ export class CloudWatchLogsComponent implements OnInit {
   }
 
   private reloadList() {
-    this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.levels).subscribe((logs) => {
+
+    this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.searchStringFields, this.levels, this.logGroups).subscribe((logs) => {
       let logsCW = this.buildLogsList(logs);
       this.docs = logsCW;
       this.loadDataLogsList(this.docs);
@@ -157,8 +167,7 @@ export class CloudWatchLogsComponent implements OnInit {
         this.endDate = this.endDateParam = now;
       }
 
-      this.loadSmartFilters();
-      this.reloadList();
+      this.loadSmartFiltersAndList();
     });
   }
 
@@ -174,14 +183,16 @@ export class CloudWatchLogsComponent implements OnInit {
 
     return new Date(now_utc);
   }
+
   private buildLogsList(logs: any) {
     let cwLogs = [];
 
-    logs.results.forEach(element => {
+    logs?.results?.forEach(element => {
       cwLogs.push({
         ActionDateTime: element[0].value,
         Message: element[1].value,
-        Level: element[2].value
+        Level: element[2].value,
+        Source: element[3].value
       });
     });
     return cwLogs;
@@ -208,29 +219,31 @@ export class CloudWatchLogsComponent implements OnInit {
             filter.value.first.forEach(value => {
               values.push(value)
             });
-            this.levels = `'${values.join('\',\'')}'`;
+            if (filter.fieldId === 'Level') {
+
+              this.levels = `'${values.join('\',\'')}'`;
+            }
+            if (filter.fieldId === 'Source') {
+              this.logGroups = `${values.join(',')}`;
+            }
         }
       }
     } else {
       this.isFiltered = false;
+      this.levels = undefined;
+      this.logGroups = undefined;
       this.endDate = this.endDateParam;
       this.startDate = this.startDateParam;
     }
-    this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.levels).subscribe((logs) => {
-      let logsCW = this.buildLogsList(logs);
-      this.docs = logsCW;
-      if (this.isFiltered || this.searchString) {
-        this.loadSmartFilters();
-      }
-      this.loadDataLogsList(this.docs);
-      this.loadDataDetailsList();
-    }, (err) => {
+
+    this.loadSmartFiltersAndList();
+    (err) => {
       if (err.indexOf("Unknown Server Error") > -1) {
         this.addonService.openDialog(this.translate.instant("Error"), 'please choose a shorter range')
       } else {
         this.addonService.openDialog(this.translate.instant("Error"), 'Error')
       }
-    });;
+    };
   }
 
   ngOnInit(): void {
@@ -244,7 +257,10 @@ export class CloudWatchLogsComponent implements OnInit {
     if (this.customLogsList) {
       const tableData = new Array<PepRowData>();
       docs.forEach((doc) => {
-        const userKeys = ["ActionDateTime", "Level", "Message"];
+        let userKeys = ["ActionDateTime", "Level", "Message"];
+        if (this.addonService.isSupportAdminUser) {
+          userKeys = ["ActionDateTime", "Level", "Source", "Message"];
+        }
         tableData.push(
           this.convertLogToPepRowData(doc, userKeys)
         );
@@ -317,19 +333,28 @@ export class CloudWatchLogsComponent implements OnInit {
 
   }
 
-  private loadSmartFilters(): void {
-    const levels: IPepSmartFilterFieldOption[] = [];
-    const sources: IPepSmartFilterFieldOption[] = [];
+  private loadSmartFiltersAndList(): void {
+    const joined$ = forkJoin({
+      stats: this.addonService.cloud_watch_logs_stats(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.searchStringFields, 'Level,Source', this.levels, this.logGroups),
+      logs: this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.searchStringFields, this.levels, this.logGroups)
+    });
 
-    this.addonService.cloud_watch_logs_stats(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, 'Level,Source', this.levels).subscribe((res) => {
-      Object.keys(res['Level']).forEach(field => {
+    joined$.subscribe((res) => {
 
-        levels.push({ value: field, count: res['Level'][field] });
+
+
+      const levels: IPepSmartFilterFieldOption[] = [];
+      const sources: IPepSmartFilterFieldOption[] = [];
+
+
+      Object.keys(res.stats['Level']).forEach(field => {
+
+        levels.push({ value: field, count: res.stats['Level'][field] });
 
       });
-      Object.keys(res['Source']).forEach(field => {
+      Object.keys(res.stats['Source']).forEach(field => {
 
-        sources.push({ value: field, count: res['Source'][field] });
+        sources.push({ value: field, count: res.stats['Source'][field] });
 
       });
       const operators: PepSmartFilterOperatorType[] = ['today', 'dateRange'];
@@ -337,10 +362,11 @@ export class CloudWatchLogsComponent implements OnInit {
       if (!this.fields) {
         this.fields = [
           createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators }, 'date-time'),
-          createSmartFilterField({ id: 'Level', name: 'Level', options: levels }, 'multi-select'),
-          createSmartFilterField({ id: 'Source', name: 'Source', options: sources }, 'multi-select')
+          createSmartFilterField({ id: 'Level', name: 'Level', options: levels }, 'multi-select')
         ];
-
+        if (this.addonService.isSupportAdminUser) {
+          this.fields.push(createSmartFilterField({ id: 'Source', name: 'Source', options: sources }, 'multi-select'));
+        }
       }
       else {
         let levelFilter = this.fields?.find(filter => filter.id == 'Level');
@@ -350,23 +376,26 @@ export class CloudWatchLogsComponent implements OnInit {
         this.fields = [
           createSmartFilterField({ id: 'ActionDateTime', name: 'Action Date Time', operators, isOpen: actionDateTimeFilter.isOpen }, 'date-time'),
           createSmartFilterField({ id: 'Level', name: 'Level', options: levels, isOpen: levelFilter.isOpen }, 'multi-select'),
-          createSmartFilterField({ id: 'Source', name: 'Source', options: sources, isOpen: sourceFilter.isOpen }, 'multi-select')
         ];
+        if (this.addonService.isSupportAdminUser) {
+          this.fields.push(createSmartFilterField({ id: 'Source', name: 'Source', options: sources, isOpen: sourceFilter.isOpen }, 'multi-select'));
+        }
       }
 
-
+      let logsCW = this.buildLogsList(res.logs);
+      this.docs = logsCW;
+      this.loadDataLogsList(this.docs);
+      this.loadDataDetailsList();
+      //this.reloadList();
     });
+
 
   }
 
   onSearchChanged(search: any) {
     this.searchString = search.value;
-    this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.levels).subscribe((docs) => {
-      let logsCW = this.buildLogsList(docs);
-      this.docs = logsCW;
-      this.loadSmartFilters();
-      this.loadDataLogsList(this.docs);
-    })
+    this.loadSmartFiltersAndList();
+
   }
 
 
@@ -413,6 +442,10 @@ export class CloudWatchLogsComponent implements OnInit {
       case "Message":
         dataRowField.ColumnWidth = 30;
         dataRowField.FormattedValue = dataRowField.Value = log['Message'];
+        break;
+      case "Source":
+        dataRowField.ColumnWidth = 5;
+        dataRowField.FormattedValue = dataRowField.Value = log['Source'];
         break;
       default:
         dataRowField.FormattedValue = log[key]
