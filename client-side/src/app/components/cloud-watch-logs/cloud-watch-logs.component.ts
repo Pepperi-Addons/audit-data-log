@@ -18,6 +18,9 @@ declare var angular: any;
   selector: 'addon-cloud-watch-logs',
   templateUrl: './cloud-watch-logs.component.html',
   styleUrls: ['./cloud-watch-logs.component.scss'],
+  host: {
+    '[style.height.px]': '33 * height'
+  }
 })
 export class CloudWatchLogsComponent implements OnInit {
   @ViewChild("PepListLogs") customLogsList: PepListComponent;
@@ -43,6 +46,7 @@ export class CloudWatchLogsComponent implements OnInit {
   details: any = '';
   logGroups: string;
   searchStringFields: string;
+  height: number;
   get showItems() {
     return this._showItems;
   }
@@ -68,7 +72,8 @@ export class CloudWatchLogsComponent implements OnInit {
     private addonService: AddonService,
     public routeParams: ActivatedRoute) {
     this.addonService.addonUUID = this.routeParams.snapshot.params['addon_uuid'];
-    this.searchStringFields = "Message,Level,Source";
+    this.searchStringFields = "Message";
+    //this.searchStringFields = "Message,Level,Source";
   }
 
   ngAfterViewInit(): void {
@@ -151,6 +156,24 @@ export class CloudWatchLogsComponent implements OnInit {
 
   private setParamsState() {
     this.routeParams.queryParams.subscribe((params) => {
+      let i = 0;
+      if (params.action_uuid) {
+        i++;
+      }
+      if (params.addon_uuid) {
+        i++;
+
+      }
+      if (params.action_date_time) {
+        i++;
+
+      }
+      if (params.user) {
+        i++;
+
+      }
+      this.height = i * 33;
+
       this.actionUUID = params.action_uuid;
       this.addonUUID = params.addon_uuid;
       this.actionDateTime = params.action_date_time;
@@ -237,13 +260,6 @@ export class CloudWatchLogsComponent implements OnInit {
     }
 
     this.loadSmartFiltersAndList();
-    (err) => {
-      if (err.indexOf("Unknown Server Error") > -1) {
-        this.addonService.openDialog(this.translate.instant("Error"), 'please choose a shorter range')
-      } else {
-        this.addonService.openDialog(this.translate.instant("Error"), 'Error')
-      }
-    };
   }
 
   ngOnInit(): void {
@@ -292,10 +308,9 @@ export class CloudWatchLogsComponent implements OnInit {
   loadDataDetailsList() {
     if (this.customDetailsList) {
       let userKeys = [];
-
       const tableData = new Array<PepRowData>();
       if (this.actionUUID) {
-        userKeys.push("ActionUUID")
+        userKeys.push("ActionUUID");
       }
       if (this.addonUUID) {
         userKeys.push("AddonUUID")
@@ -303,13 +318,13 @@ export class CloudWatchLogsComponent implements OnInit {
       if (this.user) {
         userKeys.push("User")
       }
-      if (!this.isFiltered) {
-        userKeys.push("ActionDateTime")
-      }
+      userKeys.push("ActionDateTime")
+
       tableData.push(
         this.convertDetailsToPepRowData(userKeys)
       );
 
+      this.height = userKeys.length * 33;
       if (userKeys.length > 0) {
         let rows = [];
         let uiControl;
@@ -332,20 +347,26 @@ export class CloudWatchLogsComponent implements OnInit {
     }
 
   }
+  setStyles() {
+    // return `${this.height}px !important`;
 
+    let styles = {
+      'height': `'80px'`
+    };
+    return styles;
+  }
   private loadSmartFiltersAndList(): void {
+
     const joined$ = forkJoin({
       stats: this.addonService.cloud_watch_logs_stats(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.searchStringFields, 'Level,Source', this.levels, this.logGroups),
       logs: this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.searchStringFields, this.levels, this.logGroups)
     });
 
-    joined$.subscribe((res) => {
-
-
+    joined$.subscribe(res => {
+      this.loadDataDetailsList();
 
       const levels: IPepSmartFilterFieldOption[] = [];
       const sources: IPepSmartFilterFieldOption[] = [];
-
 
       Object.keys(res.stats['Level']).forEach(field => {
 
@@ -357,7 +378,7 @@ export class CloudWatchLogsComponent implements OnInit {
         sources.push({ value: field, count: res.stats['Source'][field] });
 
       });
-      const operators: PepSmartFilterOperatorType[] = ['today', 'dateRange'];
+      const operators: PepSmartFilterOperatorType[] = ['dateRange'];
 
       if (!this.fields) {
         this.fields = [
@@ -385,9 +406,15 @@ export class CloudWatchLogsComponent implements OnInit {
       let logsCW = this.buildLogsList(res.logs);
       this.docs = logsCW;
       this.loadDataLogsList(this.docs);
-      this.loadDataDetailsList();
       //this.reloadList();
-    });
+    }
+      , err => {
+        if (err.indexOf("Unknown Server Error") > -1) {
+          this.addonService.openDialog(this.translate.instant("Error"), 'please choose a shorter range')
+        } else {
+          this.addonService.openDialog(this.translate.instant("Error"), 'Error')
+        }
+      });
 
 
   }

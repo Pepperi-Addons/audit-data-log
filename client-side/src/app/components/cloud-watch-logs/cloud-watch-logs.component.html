@@ -11,8 +11,8 @@
             </pep-smart-filters>
         </pep-side-bar>
         <div class="main-layout pull-right flip">
-            <div class="list-container" #PepListDetailsContainer>
-                <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
+            <div class="list-container" [ngStyle]="{'height.px': height}" #PepListDetailsContainer>
+                <div class=" left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
                 </div>
                 <pep-list #PepListDetails id="listDetails" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found.">
                 </pep-list>

@@ -140,7 +140,7 @@ export class AuditDataLogComponent implements OnInit {
         }
         userOptions.push({ value: email, count: user.doc_count });
       };
-      const operators: PepSmartFilterOperatorType[] = ['before', 'after', 'today', 'thisWeek', 'thisMonth', 'dateRange', 'on', 'inTheLast'];
+      const operators: PepSmartFilterOperatorType[] = ['before', 'after', 'today', 'thisWeek', 'thisMonth', 'dateRange', 'inTheLast'];
       if (!this.fields) {
         this.fields = [
           createSmartFilterField({ id: 'AddonUUID', name: 'Addon', options: addonOptions }, 'multi-select'),
@@ -219,7 +219,7 @@ export class AuditDataLogComponent implements OnInit {
   loadDataLogsList(docs) {
     const tableData = new Array<PepRowData>();
     docs.forEach((doc) => {
-      const userKeys = ["ID", "Type", "ObjectKey", "Resource", "UpdatedFields", "User", "ActionDateTime"];
+      const userKeys = ["ID", "Type", "Resource", "ObjectKey", "UpdatedFields", "User", "ActionDateTime"];
       tableData.push(
         this.convertConflictToPepRowData(doc, userKeys)
       );
@@ -286,6 +286,7 @@ export class AuditDataLogComponent implements OnInit {
         const actionUuidHtml = `<span class="custom-span">${actionUuid}</span>`;
         const operationStr = `<a href="${href}?action_uuid=${document.ActionUUID}&action_date_time=${document.CreationDateTime}&addon_uuid=${document.AddonUUID}&user=${email}">${actionUuidHtml}</span></a>`
         dataRowField.FormattedValue = dataRowField.Value = this.addonService.isSupportAdminUser ? operationStr : actionUuidHtml;
+        dataRowField.Title = 'ID';
         break;
       case "Type":
         dataRowField.ColumnWidth = 3;
@@ -293,6 +294,7 @@ export class AuditDataLogComponent implements OnInit {
         dataRowField.FormattedValue = dataRowField.Value = actionType;
         break;
       case "ObjectKey":
+        dataRowField.Title = 'Object ID';
         dataRowField.ColumnWidth = 3;
         dataRowField.FormattedValue = dataRowField.Value = `<span class="custom-span">${document.ObjectKey}</span>`;
         break;
@@ -304,6 +306,7 @@ export class AuditDataLogComponent implements OnInit {
         dataRowField.FormattedValue = dataRowField.Value = this.addonService.isSupportAdminUser ? typeStr : document.Resource;
         break;
       case "UpdatedFields":
+        dataRowField.Title = 'Changes';
         const updateFieldStr = this.buildUpdatedFieldsTable(document.UpdatedFields);
         dataRowField.FormattedValue = dataRowField.Value = updateFieldStr;
         break;
@@ -319,6 +322,7 @@ export class AuditDataLogComponent implements OnInit {
         break;
 
       case "ActionDateTime":
+        dataRowField.Title = 'Date';
         dataRowField.ColumnWidth = 5;
         dataRowField.FormattedValue = dataRowField.Value = new Date(document.ObjectModificationDateTime).toLocaleString();
         break;

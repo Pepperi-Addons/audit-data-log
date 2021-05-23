@@ -145,6 +145,9 @@ export class AddonService {
     private buildCloudWatchParams(addon_uuid: string, action_uuid: string, search_string: string, search_string_fields: string, level: string, logGroups: string) {
         let params = {};
         // TODO - remove when the nucules will be real addon
+        if (addon_uuid === '00000000-0000-0000-0000-00000000c07e') {
+            logGroups = 'Nuclues'
+        }
         if (addon_uuid && addon_uuid != '00000000-0000-0000-0000-00000000c07e') {
             params[`addon_uuid`] = addon_uuid;;
         }
