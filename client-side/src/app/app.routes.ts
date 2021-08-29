@@ -12,7 +12,7 @@ const routes: Routes = [
 
         children: [
             {
-                path: 'audit-data-log',
+                path: 'audit_data_log',
                 component: AuditDataLogComponent
             },
             {

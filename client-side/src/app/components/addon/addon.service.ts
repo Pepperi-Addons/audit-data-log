@@ -50,12 +50,19 @@ export class AddonService {
     }
 
     async getUsers() {
-        return await this.papiClient.users.iter({
+        const users = await this.papiClient.users.iter({
             fields: ['InternalID', 'Email', 'UUID'],
             page_size: -1
         }).toArray();
+
+        const contacts = await this.papiClient.get('/contacts?fields=InternalID,Email,UUID');
+        return [...users, ...contacts]
     }
 
+    async getSupportAdminUser() {
+        const supportAdminUser = await this.papiClient.get('/distributor');
+         return supportAdminUser.SupportAdminUser.Name;
+    }
     async getAddons() {
         return await this.papiClient.addons.iter({
             page_size: -1
@@ -77,7 +84,9 @@ export class AddonService {
         if (search_string_fields) {
             params[`search_string_fields`] = search_string_fields;
         }
-        params['order_by'] = 'ObjectModificationDateTime desc'
+        params['order_by'] = 'ObjectModificationDateTime desc';
+        params['page_size'] = 200;
+
 
         return this.addonService.getAddonApiCall(
             this.addonUUID,

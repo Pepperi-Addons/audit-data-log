@@ -14,15 +14,19 @@ import MyService from './my.service';
 
 export async function install(client: Client, request: Request): Promise<any> {
     const service = new MyService(client);
+    await insertSubscription(client, service);
+    return { success: true, resultObject: {} }
+}
+
+async function insertSubscription(client: Client, service: MyService) {
     let subscriptionBody: Subscription = {
         AddonRelativeURL: '/api/write_data_log_to_elastic_search',
         AddonUUID: client.AddonUUID,
-        Name: 'AuditDateLog',
+        Name: 'AuditDataLog',
         Type: 'data',
         Key: 'AuditDataLog'
     };
     await service.papiClient.notification.subscriptions.upsert(subscriptionBody);
-    return { success: true, resultObject: {} }
 }
 
 export async function uninstall(client: Client, request: Request): Promise<any> {
@@ -30,7 +34,7 @@ export async function uninstall(client: Client, request: Request): Promise<any> 
     let subscriptionBody: Subscription = {
         AddonRelativeURL: '/api/write_data_log_to_elastic_search',
         AddonUUID: client.AddonUUID,
-        Name: 'AuditDateLog',
+        Name: 'AuditDataLog',
         Type: 'data',
         Key: 'AuditDataLog',
         Hidden: true
@@ -40,6 +44,11 @@ export async function uninstall(client: Client, request: Request): Promise<any> 
 }
 
 export async function upgrade(client: Client, request: Request): Promise<any> {
+    const service = new MyService(client);
+    const subscription = await service.papiClient.notification.subscriptions.find({ where: `Name='AuditDataLog'` });
+    if (subscription.length === 0) {
+        await insertSubscription(client, service);
+    }
     return { success: true, resultObject: {} }
 }
 

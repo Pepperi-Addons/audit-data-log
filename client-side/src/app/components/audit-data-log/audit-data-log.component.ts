@@ -60,6 +60,7 @@ export class AuditDataLogComponent implements OnInit {
   numberOfResults = '';
   docs: Document[] = [];
 
+
   constructor(public translate: TranslateService,
     private dataConvertorService: PepDataConvertorService,
     private addonService: AddonService,
@@ -67,7 +68,7 @@ export class AuditDataLogComponent implements OnInit {
 
     private router: Router,
     public routeParams: ActivatedRoute) {
-    this.searchStringFields = 'ActionUUID,ObjectKey,UpdatedFields.FieldID,UpdatedFields.NewValue,UpdatedFields.OldValue';
+    this.searchStringFields = 'ActionUUID.keyword,ObjectKey.keyword,UpdatedFields.FieldID,UpdatedFields.NewValue,UpdatedFields.OldValue';
     this.addonService.addonUUID = this.routeParams.snapshot.params['addon_uuid'];
   }
 
@@ -75,10 +76,6 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   private reloadList() {
-    // this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).then((docs) => {
-    //   this.docs = docs;
-    //   this.loadDataLogsList(docs);
-    // });
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.docs = docs;
       this.loadDataLogsList(docs);
@@ -90,6 +87,7 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   ngOnInit(): void {
+
     this.addonService.getUsers().then((users) => {
       this.users = users;
       this.addonService.getAddons().then((addons) => {
@@ -127,8 +125,10 @@ export class AuditDataLogComponent implements OnInit {
       });
 
       addonValues.Values.forEach(addon => {
-        const addonObject = this.addons.find(a => a.UUID === addon.key);
-        addonOptions.push({ value: addonObject.Name, count: addon.doc_count });
+        const addonObject = this.addons.find(a => a.UUID.toLowerCase() === addon.key.toLowerCase());
+        if (addonObject) {
+          addonOptions.push({ value: addonObject.Name, count: addon.doc_count });
+        }
       });
 
       for (let user of userUalues.Values) {
@@ -284,7 +284,7 @@ export class AuditDataLogComponent implements OnInit {
         dataRowField.ColumnWidth = 3;
         const actionUuid = document.ActionUUID === NIL_UUID ? '' : document.ActionUUID;
         const actionUuidHtml = `<span class="custom-span">${actionUuid}</span>`;
-        const operationStr = `<a href="${href}?action_uuid=${document.ActionUUID}&action_date_time=${document.CreationDateTime}&addon_uuid=${document.AddonUUID}&user=${email}">${actionUuidHtml}</span></a>`
+        const operationStr = `<a href="${href}?action_uuid=${document.ActionUUID}&action_date_time=${document.CreationDateTime}&user=${email}">${actionUuidHtml}</span></a>`
         dataRowField.FormattedValue = dataRowField.Value = this.addonService.isSupportAdminUser ? operationStr : actionUuidHtml;
         dataRowField.Title = 'ID';
         break;
@@ -302,8 +302,9 @@ export class AuditDataLogComponent implements OnInit {
         dataRowField.FieldType = FIELD_TYPE.RichTextHTML;
         dataRowField.ColumnWidth = 6;
         let addon = this.addons.find(x => x.UUID === document.AddonUUID);
-        const typeStr = `<a href="${href}?addon_uuid=${document.AddonUUID}"><span class="color-link ng-star-inserted">${addon.Name}: </span></a><span>${document.Resource}</span>`
-        dataRowField.FormattedValue = dataRowField.Value = this.addonService.isSupportAdminUser ? typeStr : document.Resource;
+        const addonName = addon ? addon.Name : "N/A";
+        const typeStr = `<a href="${href}?addon_uuid=${document.AddonUUID}"><span class="color-link ng-star-inserted">${addonName}: </span></a><span>${document.Resource}</span>`
+        dataRowField.FormattedValue = dataRowField.Value = this.addonService.isSupportAdminUser ? typeStr : `${addonName}: ${document.Resource}`;
         break;
       case "UpdatedFields":
         dataRowField.Title = 'Changes';
@@ -322,7 +323,7 @@ export class AuditDataLogComponent implements OnInit {
         break;
 
       case "ActionDateTime":
-        dataRowField.Title = 'Date';
+        dataRowField.Title = 'Date & Time';
         dataRowField.ColumnWidth = 5;
         dataRowField.FormattedValue = dataRowField.Value = new Date(document.ObjectModificationDateTime).toLocaleString();
         break;
@@ -399,7 +400,6 @@ export class AuditDataLogComponent implements OnInit {
       this.loadSmartFilters();
 
     });
-    console.log(JSON.stringify(filtersData))
   }
 
   onSearchStateChanged(searchStateChangeEvent: IPepSearchStateChangeEvent) {
@@ -413,6 +413,8 @@ export class AuditDataLogComponent implements OnInit {
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.loadDataLogsList(docs);
       this.loadSmartFilters();
+    }, err => {
+
     })
   }
 

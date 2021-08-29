@@ -1,6 +1,6 @@
 {
   "AddonUUID": "00000000-0000-0000-0000-00000da1a109",
-  "AddonVersion": "0.0.84",
+  "AddonVersion": "0.0.106",
   "DebugPort": 4500,
   "WebappBaseUrl": "https://app.sandbox.pepperi.com",
   "DefaultEditor": "main",
@@ -48,11 +48,14 @@
     "ClientStack": "ng10",
     "Editors": [
       {
-        "ParentPackageName": "Audit data log",
-        "PackageName": "audit-data-log",
-        "Description": "Audit data log"
+        "ParentPackageName": "Audit Data Log",
+        "PackageName": "audit_data_log",
+        "Description": "Audit Data Log"
       }
     ],
-    "Dependencies": {}
+    "Dependencies": {
+      "pns": "1.0.86",
+      "pepperi_elastic_search": "0.0.67"
+    }
   }
 }

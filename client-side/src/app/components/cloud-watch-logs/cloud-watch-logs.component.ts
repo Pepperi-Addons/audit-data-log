@@ -19,7 +19,7 @@ declare var angular: any;
   templateUrl: './cloud-watch-logs.component.html',
   styleUrls: ['./cloud-watch-logs.component.scss'],
   host: {
-    '[style.height.px]': '33 * height'
+    '[style.height.px]': '35 * height'
   }
 })
 export class CloudWatchLogsComponent implements OnInit {
@@ -127,7 +127,6 @@ export class CloudWatchLogsComponent implements OnInit {
 
   wait(ms = 1000) {
     return new Promise(resolve => {
-      console.log(`waiting ${ms} ms...`);
       setTimeout(resolve, ms);
     });
   }
@@ -144,19 +143,9 @@ export class CloudWatchLogsComponent implements OnInit {
 
   }
 
-  private reloadList() {
-
-    this.addonService.cloud_watch_logs(this.startDate, this.endDate, this.addonUUID, this.actionUUID, this.searchString, this.searchStringFields, this.levels, this.logGroups).subscribe((logs) => {
-      let logsCW = this.buildLogsList(logs);
-      this.docs = logsCW;
-      this.loadDataLogsList(this.docs);
-      this.loadDataDetailsList();
-    });
-  }
-
   private setParamsState() {
     this.routeParams.queryParams.subscribe((params) => {
-      let i = 0;
+      let i = 1;
       if (params.action_uuid) {
         i++;
       }
@@ -164,15 +153,11 @@ export class CloudWatchLogsComponent implements OnInit {
         i++;
 
       }
-      if (params.action_date_time) {
-        i++;
-
-      }
       if (params.user) {
         i++;
 
       }
-      this.height = i * 33;
+      this.height = i * 35;
 
       this.actionUUID = params.action_uuid;
       this.addonUUID = params.addon_uuid;
@@ -186,7 +171,7 @@ export class CloudWatchLogsComponent implements OnInit {
       }
       else {
         var now = new Date();
-        this.startDate = this.startDateParam = new Date(new Date(now).setDate(now.getDate() - 1));
+        this.startDate = this.startDateParam = new Date(new Date().setHours(now.getHours() - 6));
         this.endDate = this.endDateParam = now;
       }
 
@@ -324,7 +309,6 @@ export class CloudWatchLogsComponent implements OnInit {
         this.convertDetailsToPepRowData(userKeys)
       );
 
-      this.height = userKeys.length * 33;
       if (userKeys.length > 0) {
         let rows = [];
         let uiControl;
@@ -345,16 +329,8 @@ export class CloudWatchLogsComponent implements OnInit {
         );
       }
     }
-
   }
-  setStyles() {
-    // return `${this.height}px !important`;
 
-    let styles = {
-      'height': `'80px'`
-    };
-    return styles;
-  }
   private loadSmartFiltersAndList(): void {
 
     const joined$ = forkJoin({
@@ -459,7 +435,8 @@ export class CloudWatchLogsComponent implements OnInit {
     switch (key) {
       case "ActionDateTime":
         dataRowField.ColumnWidth = 5;
-        dataRowField.FormattedValue = dataRowField.Value = log['ActionDateTime'];
+        dataRowField.FormattedValue = dataRowField.Value = new Date(log['ActionDateTime']).toLocaleString();
+        dataRowField.Title = 'Date & Time';
         break;
       case "Level":
         dataRowField.ColumnWidth = 2;
