@@ -1,5 +1,5 @@
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
-const singleSpaAngularWebpack = require('single-spa-angular-webpack5/lib/webpack').default;
+const singleSpaAngularWebpack = require('single-spa-angular/lib/webpack').default;
 const { merge } = require('webpack-merge');
 // const deps = require('./package.json').dependencies;
 const webpack = require('webpack');

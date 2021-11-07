@@ -189,7 +189,7 @@ export class AddonService {
             title: title,
             content: content,
             actionButtons: [actionButton],
-            type: "custom",
+            actionsType: "custom",
             showClose: false,
         });
         this.dialogService.openDefaultDialog(dialogData);

@@ -281,10 +281,7 @@ export class CloudWatchLogsComponent implements OnInit {
       this.customLogsList.initListData(
         uiControl,
         rows.length,
-        rows,
-        this.viewType,
-        "",
-        false
+        rows
       );
     }
 
@@ -322,10 +319,7 @@ export class CloudWatchLogsComponent implements OnInit {
         this.customDetailsList.initListData(
           uiControl,
           rows.length,
-          rows,
-          this.viewTypeDetailsTable,
-          "",
-          false
+          rows
         );
       }
     }

@@ -1,5 +1,4 @@
-<div class="addon-page-container">
-    <!-- <pep-top-bar [title]="logsTitle"> -->
+<!-- <div class="addon-page-container">
     <pep-top-bar>
         <pep-list-total [totalRows]="customLogsList?.totalRows"></pep-list-total>
         <pep-search [value]="searchString" (search)="onSearchChanged($event)" [triggerOn]="'click'" (valueChange)="onSearchAutocompleteChanged($event)" (stateChange)="onSearchStateChanged($event)">
@@ -14,14 +13,41 @@
             <div class="list-container" [ngStyle]="{'height.px': height}" #PepListDetailsContainer>
                 <div class=" left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
                 </div>
-                <pep-list #PepListDetails id="listDetails" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found.">
+                <pep-list #PepListDetails id="listDetails" [selectionTypeForActions]="'none'" [viewType]="viewTypeDetailsTable" noDataFoundMsg="No results were found.">
                 </pep-list>
             </div>
             <div class="list-container" #PepListLogsContainer>
                 <div class="left-container body-sm spacing-element-negative pull-left flip" style="display: contents">
                 </div>
-                <pep-list #PepListLogs id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="70" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found." (sortingChange)="sortingChange($event)">
+                <pep-list #PepListLogs id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="70" [viewType]="viewType" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found." (sortingChange)="sortingChange($event)">
                 </pep-list>
             </div>
         </div>
     </div>
+</div> -->
+
+<pep-page-layout>
+    <ng-container pep-top-area>
+        <pep-top-bar>
+            <pep-list-total [totalRows]="customLogsList?.totalRows"></pep-list-total>
+            <pep-search [value]="searchString" (search)="onSearchChanged($event)" [triggerOn]="'click'" (valueChange)="onSearchAutocompleteChanged($event)" (stateChange)="onSearchStateChanged($event)">
+            </pep-search>
+        </pep-top-bar>
+    </ng-container>
+    <ng-container pep-side-area>
+        <pep-side-bar #sideNav>
+            <pep-smart-filters [fields]="fields" [filters]="filters" (filtersChange)="onFiltersChange($event)">
+            </pep-smart-filters>
+        </pep-side-bar>
+    </ng-container>
+    <ng-container pep-main-area>
+        <div class="list-container" [ngStyle]="{'height.px': height}" #PepListDetailsContainer>
+            <pep-list #PepListDetails id="listDetails" [selectionTypeForActions]="'none'" [viewType]="viewTypeDetailsTable" noDataFoundMsg="No results were found.">
+            </pep-list>
+        </div>
+        <div class="list-container" #PepListLogsContainer>
+            <pep-list #PepListLogs id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="70" [viewType]="viewType" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found." (sortingChange)="sortingChange($event)">
+            </pep-list>
+        </div>
+    </ng-container>
+</pep-page-layout>    

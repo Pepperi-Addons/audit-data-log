@@ -238,10 +238,7 @@ export class AuditDataLogComponent implements OnInit {
     this.customConflictList.initListData(
       uiControl,
       rows.length,
-      rows,
-      this.viewType,
-      "",
-      false
+      rows
     );
 
   }

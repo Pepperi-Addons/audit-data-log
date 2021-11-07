@@ -3,7 +3,6 @@ import { enableProdMode, NgZone } from '@angular/core';
 
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 import { Router } from '@angular/router';
-import { ɵAnimationEngine as AnimationEngine } from '@angular/animations/browser';
 
 import { singleSpaAngular, getSingleSpaExtraProviders } from 'single-spa-angular';
 import { AppModule } from './app/app.module';
@@ -31,8 +30,7 @@ else {
         },
         template: '<addon-root />',
         Router,
-        NgZone,
-        AnimationEngine,
+        NgZone
     });
 
 

@@ -24,6 +24,7 @@ import { PepTextboxModule } from '@pepperi-addons/ngx-lib/textbox';
 import { PepListModule } from '@pepperi-addons/ngx-lib/list';
 import { PepSideBarModule } from '@pepperi-addons/ngx-lib/side-bar';
 import { PepMenuModule } from '@pepperi-addons/ngx-lib/menu';
+import { PepPageLayoutModule } from '@pepperi-addons/ngx-lib/page-layout';
 
 import {
     PepIconModule,
@@ -122,6 +123,7 @@ const pepperiComponentsModules = [
     PepTextboxModule,
     PepIconModule,
     PepMenuModule,
+    PepPageLayoutModule,
     PepSearchModule
 ];
 
