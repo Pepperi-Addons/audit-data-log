@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "cd ./server-side && npm run build && cd .. && cd ./client-side && npm run build:single-spa && cd ..",
+    "build": "cd ./client-side && npm run build:single-spa && cd .. && cd ./server-side && npm run build && cd ..",
     "init": "npm install && cd ./server-side && npm install && cd .. && cd ./client-side && yarn && cd ..",
     "client:addon": "cd client-side && ng serve --port 4400 --configuration SingleSpa && cd..",
     "client:standalone": "cd client-side && ng serve --port 4400 --configuration Standalone && cd..",
@@ -15,7 +15,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@pepperi-addons/scripts": "^1.0.27",
+    "@pepperi-addons/scripts": "^2.0.4",
     "@pepperi-addons/system-addon-utils": "file:../system-addon-utils/system-addon-utils"
   }
 }
