@@ -93,8 +93,16 @@
               "customWebpackConfig": {
                 "path": "webpack.config.js"
               }
-            }
-          }
+            },
+            "development": {
+              
+              "optimization": false,
+              "vendorChunk": true,              
+              "sourceMap": true
+              
+            }            
+          },
+          "defaultConfiguration": "development"
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",

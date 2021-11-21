@@ -1,6 +1,6 @@
 {
   "AddonUUID": "00000000-0000-0000-0000-00000da1a109",
-  "AddonVersion": "0.0.106",
+  "AddonVersion": "0.0.117",
   "DebugPort": 4500,
   "WebappBaseUrl": "https://app.sandbox.pepperi.com",
   "DefaultEditor": "main",
@@ -15,7 +15,7 @@
     "src_app_components_addon_addon_module_ts-src_app_components_addon_index_ts-node_modules_momen-322d9d",
     "vendors-node_modules_angular_cdk___ivy_ngcc___fesm2015_drag-drop_js-node_modules_angular_mate-80b215",
     "vendors-node_modules_quill_dist_quill_js"
-  ],  
+  ],
   "PublishConfig": {
     "ClientStack": "ng10",
     "Editors": [

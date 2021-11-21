@@ -151,7 +151,7 @@ import { PepSearchModule } from '@pepperi-addons/ngx-lib/search';
     exports: [
         PepNgxLibModule,
         pepperiComponentsModules,
-        MaterialModule
+        MaterialModule   
     ]
 })
 export class PepUIModule {  

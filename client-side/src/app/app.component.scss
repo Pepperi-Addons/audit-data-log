@@ -3,6 +3,8 @@
 
 ::ng-deep {
     .side-layout {
+        height: unset !important;
+
         .main-content {
             padding-top: unset;
         }
@@ -12,3 +14,5 @@
         height: 100%;
     }
 }
+
+
