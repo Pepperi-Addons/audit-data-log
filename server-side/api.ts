@@ -8,7 +8,151 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 
+export async function transactions_and_activity_data(client:Client, request:Request){
+    let typeCount= new Map([
+        ['iPad_Rep', 0],
+        ['android_Rep', 0],
+        ['iPhone_Rep', 0],
+        ['webApp_Rep',0],
+        ['iPad_Buyer',0],
+        ['android_Buyer', 0],
+        ['iPhone_Buyer',0],
+        ['webApp_Buyer', 0],
+        ['iPad_Admin',0],
+        ['android_Admin',0],
+        ['iPhone_Admin',0],
+        ['webApp_Admin',0]
+    ]);
+    let ResultMap:Map<string, number>= typeCount;
+    
+    //search for a span of a week
+    let dateNow:Date= new Date();
+    let DateNowString= dateNow.toISOString();
+    dateNow.setDate(dateNow.getDate() -7);
+    const LastWeekDateString = dateNow.toISOString();
+    let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
+    let TransactionParams: string= "where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=transactions and "+dateCheck;
+    let ActivityParams: string= "where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=activities and "+dateCheck;
+    
+    await getResource(client, typeCount, ActivityParams, TransactionParams);
+
+    try{
+        let Resource:any[]= [];
+        for(let key of ResultMap.keys() ){
+            let value= ResultMap.get(key);
+            let resource={
+            Data:  `${key}`,
+            Description: "",
+            Size: value
+        };
+        Resource.push(resource);
+        }
+        
+        let returnObject={
+            "Title": "Usage",
+            "Resources": Resource
+        }
+        return returnObject;
+
+    }
+    catch(ex){
+        console.log(`Error: ${ex}`);
+    }
+    
+}
+
+async function getTypeObj(client:Client, activityParams:string, transactionParams:string):Promise<any[]> {
+    const service = new MyService(client);
+    const papiClient = service.papiClient;
+    const dataLogUUID:string= '00000000-0000-0000-0000-00000da1a109';
+    const activityUrl:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ activityParams}`;
+    const transactionUrl:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ transactionParams}`;
+    const activityResult= await papiClient.get(`/addons/api/${activityUrl}`);
+    const transactionResult= await papiClient.get(`/addons/api/${transactionUrl}`);
+
+    return [...activityResult, ...transactionResult];
+}
+
+
+async function getResource(client:Client, counts, activityParams:string, transactionParams:string){
+    try{
+        const service = new MyService(client);
+        const papiClient = service.papiClient;
+        let result = await getTypeObj(client, activityParams, transactionParams);
+        //creating a lists of UUID taken from audit data logs
+        let UUIDstring:string= "";
+        result.forEach(resObj=>{UUIDstring+= "'"+resObj.ActionUUID+ "'"+ ', '});
+
+        let IsInAuditUUID= createUUIDArray(UUIDstring);
+
+        let syncAndUUID:string=IsInAuditUUID+ "and AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'";
+        const auditLogs = await papiClient.auditLogs.iter({include_deleted:false,where:`${syncAndUUID}`}).toArray();
+        for (const auditLog of auditLogs) {
+            const ResultObject= auditLog['AuditInfo']['ResultObject'];
+            const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
+            const userUUID:string= auditLog["AuditInfo"]["JobMessageData"]["UserUUID"];
+            const urlParam: string= "where=UUID='"+userUUID+"'";
+            const url:string = `/users?${urlParam}`;
+            let result:any= await papiClient.get(`${url}`);
+
+            let userType:string=  result[0]['Profile']['Data']['Name'];
+            switch(true){
+                case (SourceType=='2'&& userType=="Rep"):
+                    counts.set('iPad_Rep', counts.get('iPad_Rep')+1);
+                    break;
+                case (SourceType=='5'&& userType=="Rep"):
+                    counts.set('android_Rep', counts.get('android_Rep')+1);
+                    break;
+                case (SourceType=='7'&& userType=="Rep"):
+                    counts.set('iPhone_Rep', counts.get('iPhone_Rep')+1);
+                    break;
+                case (SourceType=='10'&& userType=="Rep"):
+                    counts.set('webApp_Rep', counts.get('webApp_Rep')+1);
+                    break;
+                case (SourceType=='2'&& userType=="Buyer"):
+                    counts.set('iPad_Buyer', counts.get('iPad_Buyer')+1);
+                case (SourceType=='5'&& userType=="Buyer"):
+                    counts.set('android_Buyer', counts.get('android_Buyer')+1);
+                    break;
+                case (SourceType=='7'&& userType=="Buyer"):
+                    counts.set('iPhone_Buyer', counts.get('iPhone_Buyer')+1);
+                    break;
+                case (SourceType=='10'&& userType=="Buyer"):
+                    counts.set('webApp_Buyer', counts.get('webApp_Buyer')+1);
+                    break;
+                case (SourceType=='2'&& userType=="Admin"):
+                    counts.set('iPad_Admin', counts.get('iPad_Admin')+1);
+                    break;
+                case (SourceType=='5'&& userType=="Admin"):
+                    counts.set('android_Admin', counts.get('android_Admin')+1);
+                    break;
+                case (SourceType=='7'&& userType=="Admin"):
+                    counts.set('iPhone_Admin', counts.get('iPhone_Admin')+1);
+                    break;
+                case (SourceType=='10'&& userType=="Admin"):
+                    counts.set('webApp_Admin', counts.get('webApp_Admin')+1);
+                    break;
+            }
+
+        }
+        
+    }
+    catch(ex){
+        console.log(`Error: ${ex}`);
+    } 
+}
+
+
+    
+function createUUIDArray(UUIDstring)
+{
+    let UUIDarray:string= '('+UUIDstring.substring(0,UUIDstring.length-2) +')';
+    let IsInAuditUUID:string= `UUID IN ${UUIDarray}`;
+    return IsInAuditUUID;
+}
+
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
+    
 
     const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     console.log("start write data log to elastic search");
@@ -161,10 +305,12 @@ export async function audit_data_logs(client: Client, request: Request) {
 
         return docs;
     }
+    
     catch (e) {
         console.log(`error in audit_data_log: ${e.message}`);
         throw new Error(e.message);
     }
+    
 };
 
 export async function filters(client: Client, request: Request) {
@@ -309,8 +455,10 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
         return queryResults;
     }
     catch (err) {
+        
         console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
         return err;
+        
     }
 };
 
