@@ -8,6 +8,9 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 
+const peach = require('parallel-each');
+
+
 export async function transactions_and_activity_data(client:Client, request:Request){
     let typeCount= new Map([
         ['iPad_Rep', 0],
@@ -23,7 +26,6 @@ export async function transactions_and_activity_data(client:Client, request:Requ
         ['iPhone_Admin',0],
         ['webApp_Admin',0]
     ]);
-    let ResultMap:Map<string, number>= typeCount;
     
     //search for a span of a week
     let dateNow:Date= new Date();
@@ -38,8 +40,8 @@ export async function transactions_and_activity_data(client:Client, request:Requ
 
     try{
         let Resource:any[]= [];
-        for(let key of ResultMap.keys() ){
-            let value= ResultMap.get(key);
+        for(let key of typeCount.keys() ){
+            let value= typeCount.get(key);
             let resource={
             Data:  `${key}`,
             Description: "",
@@ -61,6 +63,9 @@ export async function transactions_and_activity_data(client:Client, request:Requ
     
 }
 
+
+
+//creating array of activities UUIDs and transactions UUIDs and merge them.
 async function getTypeObj(client:Client, activityParams:string, transactionParams:string):Promise<any[]> {
     const service = new MyService(client);
     const papiClient = service.papiClient;
@@ -73,83 +78,72 @@ async function getTypeObj(client:Client, activityParams:string, transactionParam
     return [...activityResult, ...transactionResult];
 }
 
-
+//Create UUIDs array
 async function getResource(client:Client, counts, activityParams:string, transactionParams:string){
+        let result = await getTypeObj(client, activityParams, transactionParams);
+
+        //creating a list of UUID taken from audit data logs
+        let UUIDstring:string= "";
+        result.forEach(resObj=>{UUIDstring+= "'"+resObj.ActionUUID+ "'"+ ', '});
+        let UUIDarray:string= UUIDstring.substring(0,UUIDstring.length-2);
+        let arrayUUID= UUIDarray.split(',')
+
+        try{
+                await peach(arrayUUID, async(element, i)=>{
+                    await extractData(client, counts, element)
+                }, 10);
+        }
+
+        catch(ex){
+            console.log("Error:"+`${ex}`);
+
+        }
+
+        
+        
+}
+
+//Search for UUIDs in audit logs- if it does consist the UUID, increase the compatible place in the dictionary by one.
+async function extractData(client:Client, counts, element){
+    let typeMap= new Map([
+        ['2', 'iPad'],
+        ['5', 'android'],
+        ['7', 'iPhone'],
+        ['10', 'webApp']
+    ]);
+
     try{
         const service = new MyService(client);
         const papiClient = service.papiClient;
-        let result = await getTypeObj(client, activityParams, transactionParams);
-        //creating a lists of UUID taken from audit data logs
-        let UUIDstring:string= "";
-        result.forEach(resObj=>{UUIDstring+= "'"+resObj.ActionUUID+ "'"+ ', '});
+        let auditLogs:any[]= [];
+        auditLogs=  await papiClient.get(`/audit_logs?where=UUID=${element}&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`);
 
-        let IsInAuditUUID= createUUIDArray(UUIDstring);
-
-        let syncAndUUID:string=IsInAuditUUID+ "and AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'";
-        const auditLogs = await papiClient.auditLogs.iter({include_deleted:false,where:`${syncAndUUID}`}).toArray();
-        for (const auditLog of auditLogs) {
-            const ResultObject= auditLog['AuditInfo']['ResultObject'];
-            const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
-            const userUUID:string= auditLog["AuditInfo"]["JobMessageData"]["UserUUID"];
+        if(auditLogs.length!= 0 && auditLogs!= undefined) {
+            const ResultObject= await auditLogs[0]['AuditInfo']['ResultObject'];
+            const userUUID:string= await auditLogs[0]["AuditInfo"]["JobMessageData"]["UserUUID"];
             const urlParam: string= "where=UUID='"+userUUID+"'";
             const url:string = `/users?${urlParam}`;
             let result:any= await papiClient.get(`${url}`);
 
-            let userType:string=  result[0]['Profile']['Data']['Name'];
-            switch(true){
-                case (SourceType=='2'&& userType=="Rep"):
-                    counts.set('iPad_Rep', counts.get('iPad_Rep')+1);
-                    break;
-                case (SourceType=='5'&& userType=="Rep"):
-                    counts.set('android_Rep', counts.get('android_Rep')+1);
-                    break;
-                case (SourceType=='7'&& userType=="Rep"):
-                    counts.set('iPhone_Rep', counts.get('iPhone_Rep')+1);
-                    break;
-                case (SourceType=='10'&& userType=="Rep"):
-                    counts.set('webApp_Rep', counts.get('webApp_Rep')+1);
-                    break;
-                case (SourceType=='2'&& userType=="Buyer"):
-                    counts.set('iPad_Buyer', counts.get('iPad_Buyer')+1);
-                case (SourceType=='5'&& userType=="Buyer"):
-                    counts.set('android_Buyer', counts.get('android_Buyer')+1);
-                    break;
-                case (SourceType=='7'&& userType=="Buyer"):
-                    counts.set('iPhone_Buyer', counts.get('iPhone_Buyer')+1);
-                    break;
-                case (SourceType=='10'&& userType=="Buyer"):
-                    counts.set('webApp_Buyer', counts.get('webApp_Buyer')+1);
-                    break;
-                case (SourceType=='2'&& userType=="Admin"):
-                    counts.set('iPad_Admin', counts.get('iPad_Admin')+1);
-                    break;
-                case (SourceType=='5'&& userType=="Admin"):
-                    counts.set('android_Admin', counts.get('android_Admin')+1);
-                    break;
-                case (SourceType=='7'&& userType=="Admin"):
-                    counts.set('iPhone_Admin', counts.get('iPhone_Admin')+1);
-                    break;
-                case (SourceType=='10'&& userType=="Admin"):
-                    counts.set('webApp_Admin', counts.get('webApp_Admin')+1);
-                    break;
+            if((result.length!=0) && (result!=undefined)){
+                let userType:string= await result[0]['Profile']['Data']['Name'];
+                if((userType=='Rep' || userType=='Admin' || userType=='Buyer'))
+                {
+                    const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
+                    let stringSource= typeMap.get(SourceType);
+    
+                    let dictionaryString:string= `${stringSource}`+'_'+`${userType}`;
+                    
+                    counts.set(dictionaryString, counts.get(dictionaryString)+1);
+                } 
             }
-
         }
-        
     }
     catch(ex){
-        console.log(`Error: ${ex}`);
-    } 
+        console.log("error"+`${ex}`);
+    }
 }
-
-
     
-function createUUIDArray(UUIDstring)
-{
-    let UUIDarray:string= '('+UUIDstring.substring(0,UUIDstring.length-2) +')';
-    let IsInAuditUUID:string= `UUID IN ${UUIDarray}`;
-    return IsInAuditUUID;
-}
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
     
@@ -307,8 +301,8 @@ export async function audit_data_logs(client: Client, request: Request) {
     }
     
     catch (e) {
-        console.log(`error in audit_data_log: ${e.message}`);
-        throw new Error(e.message);
+        //console.log(`error in audit_data_log: ${e.message}`);
+        //throw new Error(e.message);
     }
     
 };
@@ -399,8 +393,8 @@ export async function filters(client: Client, request: Request) {
 
         return filters;
     } catch (e) {
-        console.log(`error in audit_data_log: ${e.message}`);
-        throw new Error(e.message);
+        //console.log(`error in audit_data_log: ${e.message}`);
+        //throw new Error(e.message);
     }
 };
 
@@ -456,7 +450,7 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
     }
     catch (err) {
         
-        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
+        //console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
         return err;
         
     }
@@ -517,8 +511,8 @@ export async function get_stats_from_cloud_watch(client: Client, request: Reques
         return stats;
     }
     catch (err) {
-        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
-        return err;
+        //console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
+        //return err;
     }
 };
 
