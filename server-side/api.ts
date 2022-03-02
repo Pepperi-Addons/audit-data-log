@@ -331,8 +331,8 @@ export async function audit_data_logs(client: Client, request: Request) {
     }
     
     catch (e) {
-        //console.log(`error in audit_data_log: ${e.message}`);
-        //throw new Error(e.message);
+        console.log(`error in audit_data_log: ${(e as Error).message}`);
+        throw new Error((e as Error).message);
     }
     
 };
@@ -423,8 +423,8 @@ export async function filters(client: Client, request: Request) {
 
         return filters;
     } catch (e) {
-        //console.log(`error in audit_data_log: ${e.message}`);
-        //throw new Error(e.message);
+        console.log(`error in audit_data_log: ${(e as Error).message}`);
+        throw new Error((e as Error).message);
     }
 };
 
@@ -480,7 +480,7 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
     }
     catch (err) {
         
-        //console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
+        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${(err as Error).message}`);
         return err;
         
     }
@@ -541,8 +541,8 @@ export async function get_stats_from_cloud_watch(client: Client, request: Reques
         return stats;
     }
     catch (err) {
-        //console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
-        //return err;
+        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${(err as Error).message}`);
+        return err;
     }
 };
 
