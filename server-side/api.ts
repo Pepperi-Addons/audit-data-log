@@ -10,23 +10,27 @@ import QueryUtil from '../shared/utilities/query-util'
 
 const peach = require('parallel-each');
 
-
 export async function transactions_and_activity_data(client:Client, request:Request){
-    let typeCount= new Map([
-        ['iPad_Rep', 0],
-        ['android_Rep', 0],
-        ['iPhone_Rep', 0],
-        ['webApp_Rep',0],
-        ['iPad_Buyer',0],
-        ['android_Buyer', 0],
-        ['iPhone_Buyer',0],
-        ['webApp_Buyer', 0],
-        ['iPad_Admin',0],
-        ['android_Admin',0],
-        ['iPhone_Admin',0],
-        ['webApp_Admin',0]
+    let type_user_Count:Map<string, number>= new Map([        
+        ['Users Transactions - Android', 0],
+        ['Users Transactions - iPad', 0],
+        ['Users Transactions - iPhone', 0],
+        ['Users Transactions - Web', 0],
+        ['Buyers Transactions - Android', 0],
+        ['Buyers Transactions - iPad', 0],
+        ['Buyers Transactions - iPhone', 0],
+        ['Buyers Transactions - Web', 0],
+
+        ['Users Activities - Android', 0],
+        ['Users Activities - iPad', 0],
+        ['Users Activities - iPhone', 0],
+        ['Users Activities - Web', 0],
+        ['Buyers Activities - Android', 0],
+        ['Buyers Activities - iPad', 0],
+        ['Buyers Activities - iPhone', 0],
+        ['Buyers Activities - Web', 0]
     ]);
-    
+
     //search for a span of a week
     let dateNow:Date= new Date();
     let DateNowString= dateNow.toISOString();
@@ -36,15 +40,18 @@ export async function transactions_and_activity_data(client:Client, request:Requ
     let TransactionParams: string= "where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=transactions and "+dateCheck;
     let ActivityParams: string= "where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=activities and "+dateCheck;
     
-    await getResource(client, typeCount, ActivityParams, TransactionParams);
+    await getResource(client, type_user_Count, TransactionParams, "Transactions");
+    await getResource(client, type_user_Count,ActivityParams, "Activities");
+
 
     try{
         let Resource:any[]= [];
-        for(let key of typeCount.keys() ){
-            let value= typeCount.get(key);
+        for(let key of type_user_Count.keys() ){
+            let description:string= `${key.split(' ')[1]} created by ${key.split(' ')[0]} in the last 7 days - ${key.split(' ')[3]}`;
+            let value= type_user_Count.get(key);
             let resource={
             Data:  `${key}`,
-            Description: "",
+            Description: description,
             Size: value
         };
         Resource.push(resource);
@@ -65,85 +72,108 @@ export async function transactions_and_activity_data(client:Client, request:Requ
 
 
 
-//creating array of activities UUIDs and transactions UUIDs and merge them.
-async function getTypeObj(client:Client, activityParams:string, transactionParams:string):Promise<any[]> {
+//creating array of activities UUIDs or transactions UUIDs.
+async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, Params:string):Promise<any[]> {
     const service = new MyService(client);
     const papiClient = service.papiClient;
     const dataLogUUID:string= '00000000-0000-0000-0000-00000da1a109';
-    const activityUrl:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ activityParams}`;
-    const transactionUrl:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ transactionParams}`;
-    const activityResult= await papiClient.get(`/addons/api/${activityUrl}`);
-    const transactionResult= await papiClient.get(`/addons/api/${transactionUrl}`);
+    const Url:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ Params}`;
+    const Result= await papiClient.get(`/addons/api/${Url}`);
 
-    return [...activityResult, ...transactionResult];
+    return [...Result];
 }
 
-//Create UUIDs array
-async function getResource(client:Client, counts, activityParams:string, transactionParams:string){
-        let result = await getTypeObj(client, activityParams, transactionParams);
+//Create UUIDs array, send every 100 UUIDs from the array to extractData.
+async function getResource(client:Client, counts:Map<string, number>, Params:string, activityType:string){
+        let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, Params);
 
         //creating a list of UUID taken from audit data logs
         let UUIDstring:string= "";
-        result.forEach(resObj=>{UUIDstring+= "'"+resObj.ActionUUID+ "'"+ ', '});
+        result.forEach(resObj=>{UUIDstring+= "'"+resObj.ActionUUID+ "'"+ ','});
         let UUIDarray:string= UUIDstring.substring(0,UUIDstring.length-2);
-        let arrayUUID= UUIDarray.split(',')
+        let arrayUUID= UUIDarray.split(',');
+        let allElements: any[][]= [];
+        for(let index=0; index<arrayUUID.length;index+=100){
+            let newArrayUUID= arrayUUID.slice(index,index+100);
+            allElements.push(newArrayUUID);
+
+        }
 
         try{
-                await peach(arrayUUID, async(element, i)=>{
-                    await extractData(client, counts, element)
-                }, 10);
+                await peach(allElements, async(element, i)=>{
+                    await extractData(client, counts, element, activityType)
+                }, 15);
         }
 
         catch(ex){
             console.log("Error:"+`${ex}`);
 
         }
-
-        
-        
 }
 
 //Search for UUIDs in audit logs- if it does consist the UUID, increase the compatible place in the dictionary by one.
-async function extractData(client:Client, counts, element){
+async function extractData(client:Client, counts:Map<string, number>, element, activityType:string){
     let typeMap= new Map([
         ['2', 'iPad'],
         ['5', 'android'],
         ['7', 'iPhone'],
-        ['10', 'webApp']
+        ['10', 'Web']
     ]);
 
     try{
         const service = new MyService(client);
         const papiClient = service.papiClient;
         let auditLogs:any[]= [];
-        auditLogs=  await papiClient.get(`/audit_logs?where=UUID=${element}&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`);
+        
+        let uuidstring= `/audit_logs?where=UUID IN (${element})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
+        auditLogs=  await papiClient.get(`${uuidstring}`);
 
         if(auditLogs.length!= 0 && auditLogs!= undefined) {
-            const ResultObject= await auditLogs[0]['AuditInfo']['ResultObject'];
-            const userUUID:string= await auditLogs[0]["AuditInfo"]["JobMessageData"]["UserUUID"];
-            const urlParam: string= "where=UUID='"+userUUID+"'";
-            const url:string = `/users?${urlParam}`;
-            let result:any= await papiClient.get(`${url}`);
+            let len:number= auditLogs.length;
+            while(len!=0){
+                const ResultObject= await auditLogs[len-1]['AuditInfo']['ResultObject'];
+                const userUUID:string= await auditLogs[len-1]["AuditInfo"]["JobMessageData"]["UserUUID"];
+                const urlParam: string= "where=UUID='"+userUUID+"'";
+                const contactsURL:string = `/contacts?${urlParam}`;
 
-            if((result.length!=0) && (result!=undefined)){
-                let userType:string= await result[0]['Profile']['Data']['Name'];
-                if((userType=='Rep' || userType=='Admin' || userType=='Buyer'))
-                {
-                    const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
-                    let stringSource= typeMap.get(SourceType);
-    
-                    let dictionaryString:string= `${stringSource}`+'_'+`${userType}`;
-                    
-                    counts.set(dictionaryString, counts.get(dictionaryString)+1);
-                } 
+                let contactsResult:any= await papiClient.get(`${contactsURL}`);
+
+                if((contactsResult.length!=0) && (contactsResult!=undefined)){
+                    if(contactsResult[0]['IsBuyer']==true){
+                        insertToDictionary(ResultObject, counts, typeMap, activityType, 'Buyers');
+                    }
+                }    
+                else{
+                    const usersURL:string = `/users?${urlParam}`;
+                    let usersResult:any= await papiClient.get(`${usersURL}`);
+                    if((usersResult.length!=0) && (usersResult!=undefined)){
+                        let userType:string= await usersResult[0]['Profile']['Data']['Name'];
+                        if((userType=='Rep' || userType=='Admin'))
+                        {
+                            userType= "Users";
+                            insertToDictionary(ResultObject, counts, typeMap, activityType, userType);
+                        } 
+                    }
+
+                }
+                len--;                            
             }
         }
     }
     catch(ex){
-        console.log("error"+`${ex}`);
+        console.log("error extract data"+`${ex}`);
     }
 }
-    
+
+function insertToDictionary(ResultObject, counts, typeMap, activityType:string, userType:string){
+    const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
+    let stringSource= typeMap.get(SourceType);
+
+    let dictionaryString:string= `${userType}`+' '+`${activityType}`+' - '+`${stringSource}`;
+                    
+    (userType)? (counts.set(dictionaryString, counts.get(dictionaryString)+1)) : undefined;
+
+}
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
     
