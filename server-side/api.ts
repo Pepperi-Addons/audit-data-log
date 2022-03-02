@@ -40,8 +40,8 @@ export async function transactions_and_activity_data(client:Client, request:Requ
     let TransactionParams: string= "where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=transactions and "+dateCheck;
     let ActivityParams: string= "where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=activities and "+dateCheck;
     
-    await getResource(client, type_user_Count, TransactionParams, "Transactions");
-    await getResource(client, type_user_Count,ActivityParams, "Activities");
+    await getResource(client, request, type_user_Count, TransactionParams, "Transactions");
+    await getResource(client, request, type_user_Count,ActivityParams, "Activities");
 
 
     try{
@@ -73,19 +73,15 @@ export async function transactions_and_activity_data(client:Client, request:Requ
 
 
 //creating array of activities UUIDs or transactions UUIDs.
-async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, Params:string):Promise<any[]> {
-    const service = new MyService(client);
-    const papiClient = service.papiClient;
-    const dataLogUUID:string= '00000000-0000-0000-0000-00000da1a109';
-    const Url:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ Params}`;
-    const Result= await papiClient.get(`/addons/api/${Url}`);
-
+async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request:Request, Params:string):Promise<any[]> {
+    request.query= `?${Params}`;
+    const Result= await audit_data_logs(client, request);
     return [...Result];
 }
 
 //Create UUIDs array, send every 100 UUIDs from the array to extractData.
-async function getResource(client:Client, counts:Map<string, number>, Params:string, activityType:string){
-        let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, Params);
+async function getResource(client:Client,request:Request, counts:Map<string, number>, Params:string, activityType:string){
+        let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, request, Params);
 
         //creating a list of UUID taken from audit data logs
         let UUIDstring:string= "";
@@ -174,6 +170,8 @@ function insertToDictionary(ResultObject, counts, typeMap, activityType:string, 
     (userType)? (counts.set(dictionaryString, counts.get(dictionaryString)+1)) : undefined;
 
 }
+
+
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
     
