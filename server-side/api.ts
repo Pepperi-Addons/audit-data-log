@@ -8,8 +8,9 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 
-const peach = require('parallel-each');
+import peach from 'parallel-each';
 
+//get all combination of resource-user-device and counts them.
 export async function transactions_and_activity_data(client:Client, request:Request){
     let type_user_Count:Map<string, number>= new Map([        
         ['Users Transactions - Android', 0],
@@ -31,17 +32,9 @@ export async function transactions_and_activity_data(client:Client, request:Requ
         ['Buyers Activities - Web', 0]
     ]);
 
-    //search for a span of a week
-    let dateNow:Date= new Date();
-    let DateNowString= dateNow.toISOString();
-    dateNow.setDate(dateNow.getDate() -7);
-    const LastWeekDateString = dateNow.toISOString();
-    let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
-    let TransactionParams: string= "where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=transactions and "+dateCheck;
-    let ActivityParams: string= "where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=activities and "+dateCheck;
     
-    await getResource(client, request, type_user_Count, TransactionParams, "Transactions");
-    await getResource(client, request, type_user_Count,ActivityParams, "Activities");
+    await getResource(client, request, type_user_Count, "Transactions");
+    await getResource(client, request, type_user_Count, "Activities");
 
 
     try{
@@ -73,15 +66,22 @@ export async function transactions_and_activity_data(client:Client, request:Requ
 
 
 //creating array of activities UUIDs or transactions UUIDs.
-async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request:Request, Params:string):Promise<any[]> {
+async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request:Request, resource:string):Promise<any[]> {
+    //search for a span of a week
+    let dateNow:Date= new Date();
+    let DateNowString= dateNow.toISOString();
+    dateNow.setDate(dateNow.getDate() -7);
+    const LastWeekDateString = dateNow.toISOString();
+    let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
+    let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and `+dateCheck;
     request.query= `?${Params}`;
     const Result= await audit_data_logs(client, request);
     return [...Result];
 }
 
 //Create UUIDs array, send every 100 UUIDs from the array to extractData.
-async function getResource(client:Client,request:Request, counts:Map<string, number>, Params:string, activityType:string){
-        let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, request, Params);
+async function getResource(client:Client,request:Request, counts:Map<string, number>, resource:string){
+        let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, request, resource);
 
         //creating a list of UUID taken from audit data logs
         let UUIDstring:string= "";
@@ -97,7 +97,7 @@ async function getResource(client:Client,request:Request, counts:Map<string, num
 
         try{
                 await peach(allElements, async(element, i)=>{
-                    await extractData(client, counts, element, activityType)
+                    await extractData(client, counts, element, resource)
                 }, 15);
         }
 
@@ -107,8 +107,8 @@ async function getResource(client:Client,request:Request, counts:Map<string, num
         }
 }
 
-//Search for UUIDs in audit logs- if it does consist the UUID, increase the compatible place in the dictionary by one.
-async function extractData(client:Client, counts:Map<string, number>, element, activityType:string){
+//Search for UUIDs in audit logs- if it does contains the UUID, increase the compatible place in the dictionary by one.
+async function extractData(client:Client, counts:Map<string, number>, element, resource:string){
     let typeMap= new Map([
         ['2', 'iPad'],
         ['5', 'android'],
@@ -124,35 +124,33 @@ async function extractData(client:Client, counts:Map<string, number>, element, a
         let uuidstring= `/audit_logs?where=UUID IN (${element})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
         auditLogs=  await papiClient.get(`${uuidstring}`);
 
-        if(auditLogs.length!= 0 && auditLogs!= undefined) {
-            let len:number= auditLogs.length;
-            while(len!=0){
-                const ResultObject= await auditLogs[len-1]['AuditInfo']['ResultObject'];
-                const userUUID:string= await auditLogs[len-1]["AuditInfo"]["JobMessageData"]["UserUUID"];
+        if(auditLogs!= undefined && auditLogs.length!= 0 ) {
+            for(let index= 0; index<auditLogs.length; index++){
+                const ResultObject= await auditLogs[index]['AuditInfo']['ResultObject'];
+                const userUUID:string= await auditLogs[index]["AuditInfo"]["JobMessageData"]["UserUUID"];
                 const urlParam: string= "where=UUID='"+userUUID+"'";
                 const contactsURL:string = `/contacts?${urlParam}`;
 
                 let contactsResult:any= await papiClient.get(`${contactsURL}`);
 
-                if((contactsResult.length!=0) && (contactsResult!=undefined)){
+                if((contactsResult!=undefined) && (contactsResult.length!=0)){
                     if(contactsResult[0]['IsBuyer']==true){
-                        insertToDictionary(ResultObject, counts, typeMap, activityType, 'Buyers');
+                        insertToDictionary(ResultObject, counts, typeMap, resource, 'Buyers');
                     }
                 }    
                 else{
                     const usersURL:string = `/users?${urlParam}`;
                     let usersResult:any= await papiClient.get(`${usersURL}`);
-                    if((usersResult.length!=0) && (usersResult!=undefined)){
+                    if( (usersResult!=undefined) && (usersResult.length!=0)){
                         let userType:string= await usersResult[0]['Profile']['Data']['Name'];
-                        if((userType=='Rep' || userType=='Admin'))
+                        if((userType.toLowerCase()=='rep' || userType.toLowerCase()=='admin'))
                         {
                             userType= "Users";
-                            insertToDictionary(ResultObject, counts, typeMap, activityType, userType);
+                            insertToDictionary(ResultObject, counts, typeMap, resource, userType);
                         } 
                     }
 
                 }
-                len--;                            
             }
         }
     }
@@ -161,11 +159,11 @@ async function extractData(client:Client, counts:Map<string, number>, element, a
     }
 }
 
-function insertToDictionary(ResultObject, counts, typeMap, activityType:string, userType:string){
+function insertToDictionary(ResultObject, counts, typeMap, resource:string, userType:string){
     const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
     let stringSource= typeMap.get(SourceType);
 
-    let dictionaryString:string= `${userType}`+' '+`${activityType}`+' - '+`${stringSource}`;
+    let dictionaryString:string= `${userType}`+' '+`${resource}`+' - '+`${stringSource}`;
                     
     (userType)? (counts.set(dictionaryString, counts.get(dictionaryString)+1)) : undefined;
 
