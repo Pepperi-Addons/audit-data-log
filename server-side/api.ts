@@ -88,6 +88,7 @@ async function getResource(client:Client,request:Request, counts:Map<string, num
         result.forEach(resObj=>{UUIDstring+= "'"+resObj.ActionUUID+ "'"+ ','});
         let UUIDarray:string= UUIDstring.substring(0,UUIDstring.length-2);
         let arrayUUID= UUIDarray.split(',');
+
         let allElements: any[][]= [];
         for(let index=0; index<arrayUUID.length;index+=100){
             let newArrayUUID= arrayUUID.slice(index,index+100);
@@ -124,6 +125,8 @@ async function extractData(client:Client, counts:Map<string, number>, element, r
         let uuidstring= `/audit_logs?where=UUID IN (${element})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
         auditLogs=  await papiClient.get(`${uuidstring}`);
 
+        //if audit Logs array is empty, there are no shared users between audit logs and audit data logs in the specific array.
+        //else- extract which user type the user is and which resource did he use, and insert the result to the dictionary.
         if(auditLogs!= undefined && auditLogs.length!= 0 ) {
             for(let index= 0; index<auditLogs.length; index++){
                 const ResultObject= await auditLogs[index]['AuditInfo']['ResultObject'];
@@ -145,8 +148,7 @@ async function extractData(client:Client, counts:Map<string, number>, element, r
                         let userType:string= await usersResult[0]['Profile']['Data']['Name'];
                         if((userType.toLowerCase()=='rep' || userType.toLowerCase()=='admin'))
                         {
-                            userType= "Users";
-                            insertToDictionary(ResultObject, counts, typeMap, resource, userType);
+                            insertToDictionary(ResultObject, counts, typeMap, resource, "Users");
                         } 
                     }
 
