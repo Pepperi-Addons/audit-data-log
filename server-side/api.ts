@@ -10,31 +10,32 @@ import QueryUtil from '../shared/utilities/query-util'
 
 import peach from 'parallel-each';
 
-//get all combination of resource-user-device and counts them.
+
+//get all of the combinations of resource-user-device and counts them.
 export async function transactions_and_activity_data(client:Client, request:Request){
     let type_user_Count:Map<string, number>= new Map([        
-        ['Users Transactions - Android', 0],
-        ['Users Transactions - iPad', 0],
-        ['Users Transactions - iPhone', 0],
-        ['Users Transactions - Web', 0],
-        ['Buyers Transactions - Android', 0],
-        ['Buyers Transactions - iPad', 0],
-        ['Buyers Transactions - iPhone', 0],
-        ['Buyers Transactions - Web', 0],
+        ['Users transactions - Android', 0],
+        ['Users transactions - iPad', 0],
+        ['Users transactions - iPhone', 0],
+        ['Users transactions - Web', 0],
+        ['Buyers transactions - Android', 0],
+        ['Buyers transactions - iPad', 0],
+        ['Buyers transactions - iPhone', 0],
+        ['Buyers transactions - Web', 0],
 
-        ['Users Activities - Android', 0],
-        ['Users Activities - iPad', 0],
-        ['Users Activities - iPhone', 0],
-        ['Users Activities - Web', 0],
-        ['Buyers Activities - Android', 0],
-        ['Buyers Activities - iPad', 0],
-        ['Buyers Activities - iPhone', 0],
-        ['Buyers Activities - Web', 0]
+        ['Users activities - Android', 0],
+        ['Users activities - iPad', 0],
+        ['Users activities - iPhone', 0],
+        ['Users activities - Web', 0],
+        ['Buyers activities - Android', 0],
+        ['Buyers activities - iPad', 0],
+        ['Buyers activities - iPhone', 0],
+        ['Buyers activities - Web', 0]
     ]);
 
     
-    await getResource(client, request, type_user_Count, "Transactions");
-    await getResource(client, request, type_user_Count, "Activities");
+    await getResource(client, request, type_user_Count, "transactions");
+    await getResource(client, request, type_user_Count, "activities");
 
 
     try{
@@ -64,29 +65,31 @@ export async function transactions_and_activity_data(client:Client, request:Requ
 }
 
 
-
-//creating array of activities UUIDs or transactions UUIDs.
+//Create an array of activities UUIDs or transactions UUIDs.
 async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request:Request, resource:string):Promise<any[]> {
+    
     //search for a span of a week
     let dateNow:Date= new Date();
     let DateNowString= dateNow.toISOString();
     dateNow.setDate(dateNow.getDate() -7);
     const LastWeekDateString = dateNow.toISOString();
     let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
-    let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and `+dateCheck;
-    request.query= `?${Params}`;
+    let Params: string= `AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}`;
+    request.query.where= `${Params}`;
+    request.query.fields= "ActionUUID";
+
     const Result= await audit_data_logs(client, request);
-    return [...Result];
+    return Result;
 }
 
-//Create UUIDs array, send every 100 UUIDs from the array to extractData.
+//Create UUIDs array, send every 100 UUIDs taken from the array to extractData function.
 async function getResource(client:Client,request:Request, counts:Map<string, number>, resource:string){
         let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, request, resource);
 
-        //creating a list of UUID taken from audit data logs
+        //creating a list of UUIDs taken from audit data logs
         let UUIDstring:string= "";
         result.forEach(resObj=>{UUIDstring+= "'"+resObj.ActionUUID+ "'"+ ','});
-        let UUIDarray:string= UUIDstring.substring(0,UUIDstring.length-2);
+        let UUIDarray:string= UUIDstring.substring(0,UUIDstring.length-1);
         let arrayUUID= UUIDarray.split(',');
 
         let allElements: any[][]= [];
@@ -108,7 +111,7 @@ async function getResource(client:Client,request:Request, counts:Map<string, num
         }
 }
 
-//Search for UUIDs in audit logs- if it does contains the UUID, increase the compatible place in the dictionary by one.
+//Search for UUIDs in audit logs- if it contains the UUID, increase the suitable place in the dictionary by one.
 async function extractData(client:Client, counts:Map<string, number>, element, resource:string){
     let typeMap= new Map([
         ['2', 'iPad'],
@@ -121,40 +124,41 @@ async function extractData(client:Client, counts:Map<string, number>, element, r
         const service = new MyService(client);
         const papiClient = service.papiClient;
         let auditLogs:any[]= [];
-        
-        let uuidstring= `/audit_logs?where=UUID IN (${element})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
-        auditLogs=  await papiClient.get(`${uuidstring}`);
-
-        //if audit Logs array is empty, there are no shared users between audit logs and audit data logs in the specific array.
-        //else- extract which user type the user is and which resource did he use, and insert the result to the dictionary.
-        if(auditLogs!= undefined && auditLogs.length!= 0 ) {
-            for(let index= 0; index<auditLogs.length; index++){
-                const ResultObject= await auditLogs[index]['AuditInfo']['ResultObject'];
-                const userUUID:string= await auditLogs[index]["AuditInfo"]["JobMessageData"]["UserUUID"];
-                const urlParam: string= "where=UUID='"+userUUID+"'";
-                const contactsURL:string = `/contacts?${urlParam}`;
-
-                let contactsResult:any= await papiClient.get(`${contactsURL}`);
-
-                if((contactsResult!=undefined) && (contactsResult.length!=0)){
-                    if(contactsResult[0]['IsBuyer']==true){
-                        insertToDictionary(ResultObject, counts, typeMap, resource, 'Buyers');
+        if(element[0]!= ''){
+            let uuidstring= `/audit_logs?where=UUID IN (${element})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
+            auditLogs=  await papiClient.get(`${uuidstring}`);
+    
+            //if audit Logs array is empty, there are no shared users between audit logs and audit data logs in the specific array.
+            //else- extract which user type the user is and which resource did he use, and insert the result to the dictionary.
+            if(auditLogs!= undefined && auditLogs.length!= 0 ) {
+                for(let index= 0; index<auditLogs.length; index++){
+                    const ResultObject= await auditLogs[index]['AuditInfo']['ResultObject'];
+                    const userUUID:string= await auditLogs[index]["AuditInfo"]["JobMessageData"]["UserUUID"];
+                    const urlParam: string= "where=UUID='"+userUUID+"'";
+                    const contactsURL:string = `/contacts?${urlParam}`;
+    
+                    let contactsResult:any= await papiClient.get(`${contactsURL}`);
+    
+                    if((contactsResult!=undefined) && (contactsResult.length!=0)){
+                        if(contactsResult[0]['IsBuyer']==true){
+                            insertToDictionary(ResultObject, counts, typeMap, resource, 'Buyers');
+                        }
+                    }    
+                    else{
+                        const usersURL:string = `/users?${urlParam}`;
+                        let usersResult:any= await papiClient.get(`${usersURL}`);
+                        if( (usersResult!=undefined) && (usersResult.length!=0)){
+                            let userType:string= await usersResult[0]['Profile']['Data']['Name'];
+                            if((userType.toLowerCase()=='rep' || userType.toLowerCase()=='admin'))
+                            {
+                                insertToDictionary(ResultObject, counts, typeMap, resource, "Users");
+                            } 
+                        }
                     }
-                }    
-                else{
-                    const usersURL:string = `/users?${urlParam}`;
-                    let usersResult:any= await papiClient.get(`${usersURL}`);
-                    if( (usersResult!=undefined) && (usersResult.length!=0)){
-                        let userType:string= await usersResult[0]['Profile']['Data']['Name'];
-                        if((userType.toLowerCase()=='rep' || userType.toLowerCase()=='admin'))
-                        {
-                            insertToDictionary(ResultObject, counts, typeMap, resource, "Users");
-                        } 
-                    }
-
                 }
             }
         }
+        
     }
     catch(ex){
         console.log("error extract data"+`${ex}`);
@@ -170,7 +174,6 @@ function insertToDictionary(ResultObject, counts, typeMap, resource:string, user
     (userType)? (counts.set(dictionaryString, counts.get(dictionaryString)+1)) : undefined;
 
 }
-
 
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
@@ -246,6 +249,7 @@ export async function post_to_elastic_search(client: Client, request: Request) {
 export async function audit_data_logs(client: Client, request: Request) {
 
     try {
+
         const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
         const include_count = request.query.include_count ? request.query.include_count : false;
         const fields = request.query.fields ? request.query.fields.replace(" ", "").split(",") : undefined;
@@ -449,6 +453,8 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
 
     try {
         const AWS = require('aws-sdk');
+        
+       
         const cwl = new AWS.CloudWatchLogs();
         let logGroupsNames: string[] = request.query.log_groups ? request.query.log_groups.split(',') : undefined;
 
@@ -488,6 +494,7 @@ export async function get_stats_from_cloud_watch(client: Client, request: Reques
     // return query response of a this query to cloud watch
     try {
         const AWS = require('aws-sdk');
+        
         const cwl = new AWS.CloudWatchLogs();
 
         // query params
