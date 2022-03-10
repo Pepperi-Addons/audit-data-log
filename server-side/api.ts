@@ -60,6 +60,9 @@ export async function transactions_and_activity_data(client:Client, request:Requ
     }
     catch(ex){
         console.log(`Error: ${ex}`);
+        throw new Error((ex as Error).message);
+
+        
     }
     
 }
@@ -87,21 +90,20 @@ async function getResource(client:Client,request:Request, counts:Map<string, num
         let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, request, resource);
 
         //creating a list of UUIDs taken from audit data logs
-        let UUIDstring:string= "";
-        result.forEach(resObj=>{UUIDstring+= "'"+resObj.ActionUUID+ "'"+ ','});
-        let UUIDarray:string= UUIDstring.substring(0,UUIDstring.length-1);
-        let arrayUUID= UUIDarray.split(',');
+        let allActivitiesUUIDsArray;
+        result.forEach(resObj=>{allActivitiesUUIDsArray.push(resObj.ActionUUID)});
+        
 
         let allElements: any[][]= [];
-        for(let index=0; index<arrayUUID.length;index+=100){
-            let newArrayUUID= arrayUUID.slice(index,index+100);
+        for(let index=0; index<allActivitiesUUIDsArray .length;index+=100){
+            let newArrayUUID= allActivitiesUUIDsArray.slice(index,index+100);
             allElements.push(newArrayUUID);
 
         }
 
         try{
-                await peach(allElements, async(element, i)=>{
-                    await extractData(client, counts, element, resource)
+                await peach(allElements, async(SubAllActivitiesUUIDsArray, i)=>{
+                    await extractData(client, counts, SubAllActivitiesUUIDsArray, resource)
                 }, 15);
         }
 
@@ -112,7 +114,7 @@ async function getResource(client:Client,request:Request, counts:Map<string, num
 }
 
 //Search for UUIDs in audit logs- if it contains the UUID, increase the suitable place in the dictionary by one.
-async function extractData(client:Client, counts:Map<string, number>, element, resource:string){
+async function extractData(client:Client, counts:Map<string, number>, SubAllActivitiesUUIDsArray, resource:string){
     let typeMap= new Map([
         ['2', 'iPad'],
         ['5', 'android'],
@@ -124,8 +126,8 @@ async function extractData(client:Client, counts:Map<string, number>, element, r
         const service = new MyService(client);
         const papiClient = service.papiClient;
         let auditLogs:any[]= [];
-        if(element[0]!= ''){
-            let uuidstring= `/audit_logs?where=UUID IN (${element})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
+        if(SubAllActivitiesUUIDsArray[0]!= '' && SubAllActivitiesUUIDsArray!= undefined && SubAllActivitiesUUIDsArray.length!= 0){
+            let uuidstring= `/audit_logs?where=UUID IN (${SubAllActivitiesUUIDsArray})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
             auditLogs=  await papiClient.get(`${uuidstring}`);
     
             //if audit Logs array is empty, there are no shared users between audit logs and audit data logs in the specific array.

@@ -25,12 +25,7 @@ async function insertSubscription(client: Client, service: MyService) {
         Name: 'AuditDataLog',
         Type: 'data',
         Key: 'AuditDataLog',
-        FilterPolicy: {
-            Resource: undefined,
-            Action: undefined,
-            ModifiedFields: undefined,
-            AddonUUID: undefined
-        }
+        FilterPolicy: {}
     };
     await service.papiClient.notification.subscriptions.upsert(subscriptionBody);
 }
@@ -44,12 +39,7 @@ export async function uninstall(client: Client, request: Request): Promise<any> 
         Type: 'data',
         Key: 'AuditDataLog',
         Hidden: true,
-        FilterPolicy: {
-            Resource: undefined,
-            Action: undefined,
-            ModifiedFields: undefined,
-            AddonUUID: undefined
-        }
+        FilterPolicy: {}
     };
     await service.papiClient.notification.subscriptions.upsert(subscriptionBody);
     return { success: true, resultObject: {} }
