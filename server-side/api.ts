@@ -70,18 +70,19 @@ export async function transactions_and_activity_data(client:Client, request:Requ
 
 //Create an array of activities UUIDs or transactions UUIDs.
 async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request:Request, resource:string):Promise<any[]> {
-    
+    const service = new MyService(client);
+    const papiClient = service.papiClient;
     //search for a span of a week
     let dateNow:Date= new Date();
     let DateNowString= dateNow.toISOString();
     dateNow.setDate(dateNow.getDate() -7);
     const LastWeekDateString = dateNow.toISOString();
     let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
-    let Params: string= `AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}`;
-    request.query.where= `${Params}`;
-    request.query.fields= "ActionUUID";
-
-    const Result= await audit_data_logs(client, request);
+    let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID`;
+    
+    const dataLogUUID:string= '00000000-0000-0000-0000-00000da1a109';
+    const Url:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ Params}`;
+    const Result= await papiClient.get(`/addons/api/${Url}`);
     return Result;
 }
 
