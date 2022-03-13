@@ -8,7 +8,180 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 
+import peach from 'parallel-each';
+
+
+//get all of the combinations of resource-user-device and counts them.
+export async function transactions_and_activities_data(client:Client, request:Request){
+    let type_user_Count:Map<string, number>= new Map([        
+        ['Users transactions - Android', 0],
+        ['Users transactions - iPad', 0],
+        ['Users transactions - iPhone', 0],
+        ['Users transactions - Web', 0],
+        ['Buyers transactions - Android', 0],
+        ['Buyers transactions - iPad', 0],
+        ['Buyers transactions - iPhone', 0],
+        ['Buyers transactions - Web', 0],
+
+        ['Users activities - Android', 0],
+        ['Users activities - iPad', 0],
+        ['Users activities - iPhone', 0],
+        ['Users activities - Web', 0],
+        ['Buyers activities - Android', 0],
+        ['Buyers activities - iPad', 0],
+        ['Buyers activities - iPhone', 0],
+        ['Buyers activities - Web', 0]
+    ]);
+
+    
+    await getResource(client, request, type_user_Count, "transactions");
+    await getResource(client, request, type_user_Count, "activities");
+
+
+    try{
+        let Resource:any[]= [];
+        for(let key of type_user_Count.keys() ){
+            let description:string= `${key.split(' ')[1]} created by ${key.split(' ')[0]} in the last 7 days - ${key.split(' ')[3]}`;
+            let value= type_user_Count.get(key);
+            let resource={
+            Data:  `${key}`,
+            Description: description,
+            Size: value
+        };
+        Resource.push(resource);
+        }
+        
+        let returnObject={
+            "Title": "Usage",
+            "Resources": Resource
+        }
+        return returnObject;
+
+    }
+    catch(ex){
+        console.log(`Error: ${ex}`);
+        throw new Error((ex as Error).message);
+
+        
+    }
+    
+}
+
+
+//Create an array of activities UUIDs or transactions UUIDs.
+async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request:Request, resource:string):Promise<any[]> {
+    const service = new MyService(client);
+    const papiClient = service.papiClient;
+    //search for a span of a week
+    let dateNow:Date= new Date();
+    let DateNowString= dateNow.toISOString();
+    dateNow.setDate(dateNow.getDate() -7);
+    const LastWeekDateString = dateNow.toISOString();
+    let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
+    let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID`;
+    
+    const dataLogUUID:string=client.AddonUUID;
+    const Url:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ Params}`;
+    const Result= await papiClient.get(`/addons/api/${Url}`);
+    return Result;
+}
+
+//Create UUIDs array, send every 100 UUIDs taken from the array to extractData function.
+async function getResource(client:Client,request:Request, counts:Map<string, number>, resource:string){
+        let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, request, resource);
+
+        //creating a list of UUIDs taken from audit data logs
+        let allActivitiesUUIDsArray:any[]= [];
+        if(result!= undefined && result.length!= 0 ){
+            result.forEach(resObj=>{allActivitiesUUIDsArray.push("'"+resObj.ActionUUID+"'")});
+        }
+
+        let allElements: any[][]= [];
+        for(let index=0; index<allActivitiesUUIDsArray .length;index+=100){
+            let newArrayUUID= allActivitiesUUIDsArray.slice(index,index+100);
+            allElements.push(newArrayUUID);
+
+        }
+
+        try{
+                await peach(allElements, async(SubAllActivitiesUUIDsArray, i)=>{
+                    await extractData(client, counts, SubAllActivitiesUUIDsArray, resource)
+                }, 15);
+        }
+
+        catch(ex){
+            console.log("Error:"+`${ex}`);
+
+        }
+}
+
+//Search for UUIDs in audit logs- if it contains the UUID, increase the suitable place in the dictionary by one.
+async function extractData(client:Client, counts:Map<string, number>, SubAllActivitiesUUIDsArray, resource:string){
+    let typeMap= new Map([
+        ['2', 'iPad'],
+        ['5', 'Android'],
+        ['7', 'iPhone'],
+        ['10', 'Web']
+    ]);
+
+    try{
+        const service = new MyService(client);
+        const papiClient = service.papiClient;
+        let auditLogs:any[]= [];
+        if(SubAllActivitiesUUIDsArray!= undefined && SubAllActivitiesUUIDsArray.length!= 0 && SubAllActivitiesUUIDsArray[0]!= ''){
+            let uuidstring= `/audit_logs?where=UUID IN (${SubAllActivitiesUUIDsArray})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
+            auditLogs=  await papiClient.get(`${uuidstring}`);
+    
+            //if audit Logs array is empty, there are no shared users between audit logs and audit data logs in the specific array.
+            //else- extract which user type the user is and which resource did he use, and insert the result to the dictionary.
+            if(auditLogs!= undefined && auditLogs.length!= 0 ) {
+                for(let index= 0; index<auditLogs.length; index++){
+                    const ResultObject= await auditLogs[index]['AuditInfo']['ResultObject'];
+                    const userUUID:string= await auditLogs[index]["AuditInfo"]["JobMessageData"]["UserUUID"];
+                    const urlParam: string= "where=UUID='"+userUUID+"'";
+                    const contactsURL:string = `/contacts?${urlParam}`;
+    
+                    let contactsResult:any= await papiClient.get(`${contactsURL}`);
+    
+                    if((contactsResult!=undefined) && (contactsResult.length!=0)){
+                        if(contactsResult[0]['IsBuyer']==true){
+                            insertToDictionary(ResultObject, counts, typeMap, resource, 'Buyers');
+                        }
+                    }    
+                    else{
+                        const usersURL:string = `/users?${urlParam}`;
+                        let usersResult:any= await papiClient.get(`${usersURL}`);
+                        if( (usersResult!=undefined) && (usersResult.length!=0)){
+                            let userType:string= await usersResult[0]['Profile']['Data']['Name'];
+                            if((userType.toLowerCase()=='rep' || userType.toLowerCase()=='admin'))
+                            {
+                                insertToDictionary(ResultObject, counts, typeMap, resource, "Users");
+                            } 
+                        }
+                    }
+                }
+            }
+        }
+        
+    }
+    catch(ex){
+        console.log("error extract data"+`${ex}`);
+    }
+}
+
+function insertToDictionary(ResultObject, counts, typeMap, resource:string, userType:string){
+    const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
+    let stringSource= typeMap.get(SourceType);
+    if(stringSource!= undefined){
+        let dictionaryString:string= `${userType}`+' '+`${resource}`+' - '+`${stringSource}`;            
+        (userType)? (counts.set(dictionaryString, counts.get(dictionaryString)+1)) : undefined;
+    }
+    
+}
+
+
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
+    
 
     const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     console.log("start write data log to elastic search");
@@ -80,6 +253,7 @@ export async function post_to_elastic_search(client: Client, request: Request) {
 export async function audit_data_logs(client: Client, request: Request) {
 
     try {
+
         const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
         const include_count = request.query.include_count ? request.query.include_count : false;
         const fields = request.query.fields ? request.query.fields.replace(" ", "").split(",") : undefined;
@@ -161,10 +335,12 @@ export async function audit_data_logs(client: Client, request: Request) {
 
         return docs;
     }
+    
     catch (e) {
-        console.log(`error in audit_data_log: ${e.message}`);
-        throw new Error(e.message);
+        console.log(`error in audit_data_log: ${(e as Error).message}`);
+        throw new Error((e as Error).message);
     }
+    
 };
 
 export async function filters(client: Client, request: Request) {
@@ -253,8 +429,8 @@ export async function filters(client: Client, request: Request) {
 
         return filters;
     } catch (e) {
-        console.log(`error in audit_data_log: ${e.message}`);
-        throw new Error(e.message);
+        console.log(`error in audit_data_log: ${(e as Error).message}`);
+        throw new Error((e as Error).message);
     }
 };
 
@@ -281,6 +457,8 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
 
     try {
         const AWS = require('aws-sdk');
+        
+       
         const cwl = new AWS.CloudWatchLogs();
         let logGroupsNames: string[] = request.query.log_groups ? request.query.log_groups.split(',') : undefined;
 
@@ -309,8 +487,10 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
         return queryResults;
     }
     catch (err) {
-        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
+        
+        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${(err as Error).message}`);
         return err;
+        
     }
 };
 
@@ -318,6 +498,7 @@ export async function get_stats_from_cloud_watch(client: Client, request: Reques
     // return query response of a this query to cloud watch
     try {
         const AWS = require('aws-sdk');
+        
         const cwl = new AWS.CloudWatchLogs();
 
         // query params
@@ -369,7 +550,7 @@ export async function get_stats_from_cloud_watch(client: Client, request: Reques
         return stats;
     }
     catch (err) {
-        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${err.message}`);
+        console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${(err as Error).message}`);
         return err;
     }
 };
