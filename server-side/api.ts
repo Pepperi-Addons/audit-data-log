@@ -12,7 +12,7 @@ import peach from 'parallel-each';
 
 
 //get all of the combinations of resource-user-device and counts them.
-export async function transactions_and_activity_data(client:Client, request:Request){
+export async function transactions_and_activities_data(client:Client, request:Request){
     let type_user_Count:Map<string, number>= new Map([        
         ['Users transactions - Android', 0],
         ['Users transactions - iPad', 0],
@@ -80,7 +80,7 @@ async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request
     let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
     let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID`;
     
-    const dataLogUUID:string= '00000000-0000-0000-0000-00000da1a109';
+    const dataLogUUID:string=client.AddonUUID;
     const Url:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ Params}`;
     const Result= await papiClient.get(`/addons/api/${Url}`);
     return Result;
@@ -119,7 +119,7 @@ async function getResource(client:Client,request:Request, counts:Map<string, num
 async function extractData(client:Client, counts:Map<string, number>, SubAllActivitiesUUIDsArray, resource:string){
     let typeMap= new Map([
         ['2', 'iPad'],
-        ['5', 'android'],
+        ['5', 'Android'],
         ['7', 'iPhone'],
         ['10', 'Web']
     ]);
@@ -172,11 +172,11 @@ async function extractData(client:Client, counts:Map<string, number>, SubAllActi
 function insertToDictionary(ResultObject, counts, typeMap, resource:string, userType:string){
     const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
     let stringSource= typeMap.get(SourceType);
-
-    let dictionaryString:string= `${userType}`+' '+`${resource}`+' - '+`${stringSource}`;
-                    
-    (userType)? (counts.set(dictionaryString, counts.get(dictionaryString)+1)) : undefined;
-
+    if(stringSource!= undefined){
+        let dictionaryString:string= `${userType}`+' '+`${resource}`+' - '+`${stringSource}`;            
+        (userType)? (counts.set(dictionaryString, counts.get(dictionaryString)+1)) : undefined;
+    }
+    
 }
 
 
