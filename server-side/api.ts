@@ -90,9 +90,10 @@ async function getResource(client:Client,request:Request, counts:Map<string, num
         let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, request, resource);
 
         //creating a list of UUIDs taken from audit data logs
-        let allActivitiesUUIDsArray;
-        result.forEach(resObj=>{allActivitiesUUIDsArray.push(resObj.ActionUUID)});
-        
+        let allActivitiesUUIDsArray:any[]= [];
+        if(result!= undefined && result.length!= 0 ){
+            result.forEach(resObj=>{allActivitiesUUIDsArray.push("'"+resObj.ActionUUID+"'")});
+        }
 
         let allElements: any[][]= [];
         for(let index=0; index<allActivitiesUUIDsArray .length;index+=100){
@@ -126,7 +127,7 @@ async function extractData(client:Client, counts:Map<string, number>, SubAllActi
         const service = new MyService(client);
         const papiClient = service.papiClient;
         let auditLogs:any[]= [];
-        if(SubAllActivitiesUUIDsArray[0]!= '' && SubAllActivitiesUUIDsArray!= undefined && SubAllActivitiesUUIDsArray.length!= 0){
+        if(SubAllActivitiesUUIDsArray!= undefined && SubAllActivitiesUUIDsArray.length!= 0 && SubAllActivitiesUUIDsArray[0]!= ''){
             let uuidstring= `/audit_logs?where=UUID IN (${SubAllActivitiesUUIDsArray})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
             auditLogs=  await papiClient.get(`${uuidstring}`);
     
