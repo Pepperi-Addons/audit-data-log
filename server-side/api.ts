@@ -41,7 +41,7 @@ export async function transactions_and_activities_data(client:Client, request:Re
     try{
         let Resource:any[]= [];
         for(let key of type_user_Count.keys() ){
-            let description:string= `${key.split(' ')[1]} created by ${key.split(' ')[0]} in the last 7 days - ${key.split(' ')[3]}`;
+            let description:string= `${key.split(' ')[1]} created by ${key.split(' ')[0]} in the last day - ${key.split(' ')[3]}`;
             let value= type_user_Count.get(key);
             let resource={
             Data:  `${key}`,
@@ -73,11 +73,18 @@ async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request
     const service = new MyService(client);
     const papiClient = service.papiClient;
     //search for a span of a week
-    let dateNow:Date= new Date();
-    let DateNowString= dateNow.toISOString();
-    dateNow.setDate(dateNow.getDate() -7);
-    const LastWeekDateString = dateNow.toISOString();
-    let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
+    let LastDay:Date= new Date();
+    let CurrentDay:Date= new Date();
+
+    LastDay.setHours(1,59,59);
+
+    CurrentDay.setDate(LastDay.getDate() -1);
+    CurrentDay.setHours(2,0,0);
+
+    const LastDayString = LastDay.toISOString();
+    const CurrentDayString = CurrentDay.toISOString();
+
+    let dateCheck: string= "CreationDateTime>="+CurrentDayString +" and CreationDateTime<="+ LastDayString;
     let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID`;
     
     const dataLogUUID:string=client.AddonUUID;
