@@ -73,20 +73,14 @@ async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request
     const service = new MyService(client);
     const papiClient = service.papiClient;
     
-    //search for a span of a day
-    let startTime:any= new Date();
-    let endTime:any= new Date();
+    //search for a span of the last calendar day
+    let startTime:any= new Date(new Date().setDate((new Date()).getDate() -1));
+    let endTime:any= new Date(new Date().setDate((new Date()).getDate() -1));
 
-    startTime.setDate(startTime.getDate() -1);
     startTime.setUTCHours(0,0,0);
-
-    endTime.setDate(endTime.getDate() -1);
     endTime.setUTCHours(23,59,59);
 
-    const startTimeString = startTime.toISOString();
-    const endTimeString = endTime.toISOString();
-
-    let dateCheck: string= "CreationDateTime>="+startTimeString +" and CreationDateTime<="+ endTimeString;
+    let dateCheck: string= "CreationDateTime>="+startTime.toISOString() +" and CreationDateTime<="+ endTime.toISOString();
     let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID`;
     
     const dataLogUUID:string=client.AddonUUID;
