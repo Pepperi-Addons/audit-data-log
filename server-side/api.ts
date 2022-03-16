@@ -72,19 +72,21 @@ export async function transactions_and_activities_data(client:Client, request:Re
 async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request:Request, resource:string):Promise<any[]> {
     const service = new MyService(client);
     const papiClient = service.papiClient;
-    //search for a span of a week
-    let LastDay:Date= new Date();
-    let CurrentDay:Date= new Date();
+    
+    //search for a span of a day
+    let startTime:any= new Date();
+    let endTime:any= new Date();
 
-    LastDay.setHours(1,59,59);
+    startTime.setDate(startTime.getDate() -1);
+    startTime.setUTCHours(0,0,0);
 
-    CurrentDay.setDate(LastDay.getDate() -1);
-    CurrentDay.setHours(2,0,0);
+    endTime.setDate(endTime.getDate() -1);
+    endTime.setUTCHours(23,59,59);
 
-    const LastDayString = LastDay.toISOString();
-    const CurrentDayString = CurrentDay.toISOString();
+    const startTimeString = startTime.toISOString();
+    const endTimeString = endTime.toISOString();
 
-    let dateCheck: string= "CreationDateTime>="+CurrentDayString +" and CreationDateTime<="+ LastDayString;
+    let dateCheck: string= "CreationDateTime>="+startTimeString +" and CreationDateTime<="+ endTimeString;
     let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID`;
     
     const dataLogUUID:string=client.AddonUUID;
