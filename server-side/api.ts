@@ -41,7 +41,7 @@ export async function transactions_and_activities_data(client:Client, request:Re
     try{
         let Resource:any[]= [];
         for(let key of type_user_Count.keys() ){
-            let description:string= `${key.split(' ')[1]} created by ${key.split(' ')[0]} in the last 7 days - ${key.split(' ')[3]}`;
+            let description:string= `${key.split(' ')[1]} created by ${key.split(' ')[0]} in the last day - ${key.split(' ')[3]}`;
             let value= type_user_Count.get(key);
             let resource={
             Data:  `${key}`,
@@ -72,12 +72,15 @@ export async function transactions_and_activities_data(client:Client, request:Re
 async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request:Request, resource:string):Promise<any[]> {
     const service = new MyService(client);
     const papiClient = service.papiClient;
-    //search for a span of a week
-    let dateNow:Date= new Date();
-    let DateNowString= dateNow.toISOString();
-    dateNow.setDate(dateNow.getDate() -7);
-    const LastWeekDateString = dateNow.toISOString();
-    let dateCheck: string= "CreationDateTime>="+ LastWeekDateString+" and CreationDateTime<="+ DateNowString;
+    
+    //search for a span of the last calendar day
+    let startTime:any= new Date(new Date().setDate((new Date()).getDate() -1));
+    let endTime:any= new Date(new Date().setDate((new Date()).getDate() -1));
+
+    startTime.setUTCHours(0,0,0);
+    endTime.setUTCHours(23,59,59);
+
+    let dateCheck: string= "CreationDateTime>="+startTime.toISOString() +" and CreationDateTime<="+ endTime.toISOString();
     let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID`;
     
     const dataLogUUID:string=client.AddonUUID;
