@@ -55,7 +55,9 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
         "AddonUUID": addonUUID,
         "Name": "transactionsAndActivities",
         "Type": "AddonAPI",
-        "AddonRelativeURL":"/api/transactions_and_activities_data"
+        "AddonRelativeURL":"/api/transactions_and_activities_data",
+        "ReportingPeriod": "Weekly",
+        "AggregationFunction": "SUM"
     
     }
     const subscription = await service.papiClient.notification.subscriptions.find({ where: `Name='AuditDataLog'` });
