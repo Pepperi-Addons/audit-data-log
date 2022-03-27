@@ -56,7 +56,6 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
         "Name": "transactionsAndActivities",
         "Type": "AddonAPI",
         "AddonRelativeURL":"/api/transactions_and_activities_data",
-        "ReportingPeriod": "Weekly",
         "AggregationFunction": "SUM"
     
     }
