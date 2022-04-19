@@ -23,6 +23,15 @@ export async function transactions_and_activities_data(client:Client, request:Re
         ['Buyers transactions - iPhone', 0],
         ['Buyers transactions - Web', 0],
 
+        ['Users transactions - Packages - Android', 0],
+        ['Users transactions - Packages - iPad', 0],
+        ['Users transactions - Packages - iPhone', 0],
+        ['Users transactions - Packages - Web', 0],
+        ['Buyers transactions - Packages - Android', 0],
+        ['Buyers transactions - Packages - iPad', 0],
+        ['Buyers transactions - Packages - iPhone', 0],
+        ['Buyers transactions - Packages - Web', 0],
+        
         ['Users activities - Android', 0],
         ['Users activities - iPad', 0],
         ['Users activities - iPhone', 0],
@@ -33,6 +42,8 @@ export async function transactions_and_activities_data(client:Client, request:Re
         ['Buyers activities - Web', 0]
     ]);
 
+    //let packageType: any[] = [];
+    //await getPackagesCount(client, packageType);
     
     await getResource(client, request, type_user_Count, "transactions");
     await getResource(client, request, type_user_Count, "activities");
@@ -60,9 +71,7 @@ export async function transactions_and_activities_data(client:Client, request:Re
     }
     catch(ex){
         console.log(`Error: ${ex}`);
-        throw new Error((ex as Error).message);
-
-        
+        throw new Error((ex as Error).message);       
     }
     
 }
@@ -74,14 +83,17 @@ async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request
     const papiClient = service.papiClient;
     
     //search for a span of the last calendar day
-    let startTime:any= new Date(new Date().setDate((new Date()).getDate() -1));
-    let endTime:any= new Date(new Date().setDate((new Date()).getDate() -1));
+    //let startTime:any= new Date(new Date().setDate((new Date()).getDate() -1));
+    //let endTime:any= new Date(new Date().setDate((new Date()).getDate() -1));
+
+    let startTime:any= new Date(new Date().setDate((new Date()).getDate() -8));
+    let endTime:any= new Date(new Date().setDate((new Date()).getDate() ));
 
     startTime.setUTCHours(0,0,0);
     endTime.setUTCHours(23,59,59);
 
     let dateCheck: string= "CreationDateTime>="+startTime.toISOString() +" and CreationDateTime<="+ endTime.toISOString();
-    let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID`;
+    let Params: string= `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${resource} and ${dateCheck}&fields=ActionUUID,ObjectKey`;
     
     const dataLogUUID:string=client.AddonUUID;
     const Url:string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ Params}`;
@@ -90,20 +102,13 @@ async function GetActivitiesAndTranstactionsAuditDataLogs(client:Client, request
 }
 
 //Create UUIDs array, send every 100 UUIDs taken from the array to extractData function.
-async function getResource(client:Client,request:Request, counts:Map<string, number>, resource:string){
+async function getResource(client: Client, request: Request, counts: Map<string, number>, resource: string){
         let result = await GetActivitiesAndTranstactionsAuditDataLogs(client, request, resource);
-
-        //creating a list of UUIDs taken from audit data logs
-        let allActivitiesUUIDsArray:any[]= [];
-        if(result!= undefined && result.length!= 0 ){
-            result.forEach(resObj=>{allActivitiesUUIDsArray.push("'"+resObj.ActionUUID+"'")});
-        }
-
         let allElements: any[][]= [];
-        for(let index=0; index<allActivitiesUUIDsArray .length;index+=100){
-            let newArrayUUID= allActivitiesUUIDsArray.slice(index,index+100);
-            allElements.push(newArrayUUID);
 
+        for(let index=0; index<result.length ;index+=100){
+            let newArrayUUID= result.slice(index,index+100);
+            allElements.push(newArrayUUID);
         }
 
         try{
@@ -126,29 +131,55 @@ async function extractData(client:Client, counts:Map<string, number>, SubAllActi
         ['7', 'iPhone'],
         ['10', 'Web']
     ]);
+    let allActivitiesUUIDsArray: any[] = [];
+    let allActivitiesUUIDsArraynoquotes: any[] = [];
 
+    let objectKeyArray: any[] = [];
+    for(let i=0; i< SubAllActivitiesUUIDsArray.length; i++){
+        allActivitiesUUIDsArray[i] = "'"+ SubAllActivitiesUUIDsArray[i]['ActionUUID'] + "'";
+        allActivitiesUUIDsArraynoquotes[i] = SubAllActivitiesUUIDsArray[i]['ActionUUID'] ;
+
+        objectKeyArray[i] = SubAllActivitiesUUIDsArray[i]['ObjectKey'];
+    }
     try{
         const service = new MyService(client);
         const papiClient = service.papiClient;
-        let auditLogs:any[]= [];
-        if(SubAllActivitiesUUIDsArray!= undefined && SubAllActivitiesUUIDsArray.length!= 0 && SubAllActivitiesUUIDsArray[0]!= ''){
-            let uuidstring= `/audit_logs?where=UUID IN (${SubAllActivitiesUUIDsArray})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
-            auditLogs=  await papiClient.get(`${uuidstring}`);
-    
+        let auditLogs: any[]= [];
+        let transactionNotPackage: any[]= [];
+        let filteredArray: any[]= [];
+        if(allActivitiesUUIDsArray!= undefined && allActivitiesUUIDsArray.length!= 0 && allActivitiesUUIDsArray[0]!= ''){
+            let uuidstring= `/audit_logs?where=UUID IN (${allActivitiesUUIDsArray})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
+            auditLogs=  await papiClient.get(`${uuidstring}`);            
+            
+            let body={
+                "UUIDList": objectKeyArray,
+                "fields": "UUID"
+            }
+            //if UUID does not appear in transactions table- it is not of type package.
+            let urlUUIDNotPackage = "/transactions/search";
+
+            //transactionNotPackage- transactions that are not of package type
+            transactionNotPackage = await papiClient.post(`${urlUUIDNotPackage}`, body);
+
             //if audit Logs array is empty, there are no shared users between audit logs and audit data logs in the specific array.
             //else- extract which user type the user is and which resource did he use, and insert the result to the dictionary.
             if(auditLogs!= undefined && auditLogs.length!= 0 ) {
                 for(let index= 0; index<auditLogs.length; index++){
-                    const ResultObject= await auditLogs[index]['AuditInfo']['ResultObject'];
-                    const userUUID:string= await auditLogs[index]["AuditInfo"]["JobMessageData"]["UserUUID"];
-                    const urlParam: string= "where=UUID='"+userUUID+"'";
-                    const contactsURL:string = `/contacts?${urlParam}`;
-    
-                    let contactsResult:any= await papiClient.get(`${contactsURL}`);
-    
+                    const ResultObject = await auditLogs[index]['AuditInfo']['ResultObject'];
+                    const userUUID:string = await auditLogs[index]["AuditInfo"]["JobMessageData"]["UserUUID"];
+                    const urlParam: string = "where=UUID='"+userUUID+"'";
+                    const contactsURL: string = `/contacts?${urlParam}`;
+                    let contactsResult: any = await papiClient.get(`${contactsURL}`);
+                    //let y= filteredArray[index];
+                    //checking if transaction UUID is in UUIDs array (of transactions not of type package)
+                    const isOfTypePackage = transactionNotPackage.find(element => element['UUID'] == filteredArray[index]);
+                    
+                    let isPackage: boolean;
+                    (isOfTypePackage!=undefined) ? (isPackage = false) : (isPackage = true)
+
                     if((contactsResult!=undefined) && (contactsResult.length!=0)){
-                        if(contactsResult[0]['IsBuyer']==true){
-                            insertToDictionary(ResultObject, counts, typeMap, resource, 'Buyers');
+                        if(contactsResult[0]['IsBuyer'] == true){
+                            insertToDictionary(client, ResultObject, counts, typeMap, resource, 'Buyers', isPackage);
                         }
                     }    
                     else{
@@ -156,32 +187,97 @@ async function extractData(client:Client, counts:Map<string, number>, SubAllActi
                         let usersResult:any= await papiClient.get(`${usersURL}`);
                         if( (usersResult!=undefined) && (usersResult.length!=0)){
                             let userType:string= await usersResult[0]['Profile']['Data']['Name'];
-                            if((userType.toLowerCase()=='rep' || userType.toLowerCase()=='admin'))
+                            if((userType.toLowerCase() == 'rep' || userType.toLowerCase() == 'admin'))
                             {
-                                insertToDictionary(ResultObject, counts, typeMap, resource, "Users");
+                                insertToDictionary(client, ResultObject, counts, typeMap, resource, "Users", isPackage);
                             } 
                         }
                     }
                 }
             }
         }
-        
     }
     catch(ex){
         console.log("error extract data"+`${ex}`);
     }
 }
 
-function insertToDictionary(ResultObject, counts, typeMap, resource:string, userType:string){
-    const SourceType: string= ResultObject.match(/SourceType\":\"(\d+)/i)[1];
+function insertToDictionary(client, ResultObject, counts, typeMap, resource: string, userType: string, isPackage){
+    const SourceType: string = ResultObject.match(/SourceType\":\"(\d+)/i)[1];
     let stringSource= typeMap.get(SourceType);
     if(stringSource!= undefined){
-        let dictionaryString:string= `${userType}`+' '+`${resource}`+' - '+`${stringSource}`;            
-        (userType)? (counts.set(dictionaryString, counts.get(dictionaryString)+1)) : undefined;
+        let dictionaryString: string;
+        //checking if a transaction is of type package
+        if(resource == "transactions"){
+            if(isPackage){
+                dictionaryString= `${userType}`+' '+`${resource}`+' - Packages - '+`${stringSource}`;
+                (userType)? (counts.set(dictionaryString, counts.get(dictionaryString) + 1)) : undefined;
+            }
+            else{
+                dictionaryString= `${userType}`+' '+`${resource}`+' - '+`${stringSource}`;
+                (userType)? (counts.set(dictionaryString, counts.get(dictionaryString) + 1)) : undefined;
+            }
+        }
+        else{
+            dictionaryString= `${userType}`+' '+`${resource}`+' - '+`${stringSource}`;
+            (userType)? (counts.set(dictionaryString, counts.get(dictionaryString) + 1)) : undefined;
+        }
     }
-    
 }
 
+
+/*
+async function checkIfPackage(client){
+    const service = new MyService(client);
+    const papiClient = service.papiClient;
+    let urlParam = `fields=ActivityTypeID,UUID&where=UUID IN (${packageType})`;
+    const transactionsURL: string = `/transactions?${urlParam}`;
+    let transactionsResult: any= await papiClient.get(`${transactionsURL}`);
+    return transactionsResult;
+}
+*/
+
+/*
+async function getPackagesCount(client, packageType){
+    const service = new MyService(client);
+    const papiClient = service.papiClient;
+    let transactionTypesCount;
+    
+    await papiClient.metaData.type('transactions').types.get()
+            .then(async x => {
+                let transactionsTypes = x;
+                transactionTypesCount = x.length;
+                let allElements: any[][]= [];
+                for(let index=0; index<transactionsTypes.length ;index+=10){
+                    let newTransactionArray= transactionsTypes.slice(index,index+10);
+                    allElements.push(newTransactionArray);
+
+                }
+                try{
+                    await peach(allElements, async(SubTransactionsTypes, i)=>{
+                        await getADT(service, SubTransactionsTypes, packageType)
+                    }, 15);
+                }
+            
+                catch(ex){
+                    console.log("Error:"+`${ex}`);
+                }
+            })
+}
+
+async function getADT(service, SubTransactionsTypes, packageType){
+    
+    for(let index = 0; index< SubTransactionsTypes.length; index++){
+        let typeID= SubTransactionsTypes[index]['TypeID'];
+        const url = `/meta_data/Transactions/Types/${typeID}/settings`;
+        let getDataType = await service.papiClient.get(url);
+        if(getDataType['Type']['ID'] == 3){
+            let pushDataType: string= `${SubTransactionsTypes[index]['TypeID']}`;
+            packageType.push("'" + `${pushDataType}` + "'");
+        }
+    }
+}
+*/
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
     
