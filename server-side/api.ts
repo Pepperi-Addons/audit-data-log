@@ -135,22 +135,37 @@ async function extractData(client:Client, counts:Map<string, number>, SubAllActi
     let allActivitiesUUIDsArraynoquotes: any[] = [];
 
     let objectKeyArray: any[] = [];
+    let uuidKeyMapping = new Map<string, [string]>();
+
     for(let i=0; i< SubAllActivitiesUUIDsArray.length; i++){
         allActivitiesUUIDsArray[i] = "'"+ SubAllActivitiesUUIDsArray[i]['ActionUUID'] + "'";
         allActivitiesUUIDsArraynoquotes[i] = SubAllActivitiesUUIDsArray[i]['ActionUUID'] ;
-
         objectKeyArray[i] = SubAllActivitiesUUIDsArray[i]['ObjectKey'];
+
+        if (!uuidKeyMapping.has(allActivitiesUUIDsArraynoquotes[i])) {
+            uuidKeyMapping.set(allActivitiesUUIDsArraynoquotes[i], [objectKeyArray[i]]);
+        }
+        else{
+            if(uuidKeyMapping.get(allActivitiesUUIDsArraynoquotes[i])!= undefined ){
+                uuidKeyMapping.get(allActivitiesUUIDsArraynoquotes[i])?.push(objectKeyArray[i]);
+            }
+
+        }
+
     }
     try{
         const service = new MyService(client);
         const papiClient = service.papiClient;
         let auditLogs: any[]= [];
         let transactionNotPackage: any[]= [];
-        let filteredArray: any[]= [];
         if(allActivitiesUUIDsArray!= undefined && allActivitiesUUIDsArray.length!= 0 && allActivitiesUUIDsArray[0]!= ''){
+
             let uuidstring= `/audit_logs?where=UUID IN (${allActivitiesUUIDsArray})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
-            auditLogs=  await papiClient.get(`${uuidstring}`);            
-            
+            auditLogs=  await papiClient.get(`${uuidstring}`);
+            let filteredArray: any[] =[];
+            for(let index= 0; index<auditLogs.length; index++){
+                uuidKeyMapping.get(auditLogs[index]['UUID'])?.forEach(element => filteredArray.push(element));
+            }           
             let body={
                 "UUIDList": objectKeyArray,
                 "fields": "UUID"
