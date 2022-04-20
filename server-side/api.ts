@@ -162,10 +162,12 @@ async function extractData(client:Client, counts:Map<string, number>, SubAllActi
 
             let uuidstring= `/audit_logs?where=UUID IN (${allActivitiesUUIDsArray})&AuditInfo.JobMessageData.AddonData.AddonUUID='00000000-0000-0000-0000-000000abcdef'`;
             auditLogs=  await papiClient.get(`${uuidstring}`);
+            /*
             let filteredArray: any[] =[];
             for(let index= 0; index<auditLogs.length; index++){
                 uuidKeyMapping.get(auditLogs[index]['UUID'])?.forEach(element => filteredArray.push(element));
-            }           
+            }    
+            */       
             let body={
                 "UUIDList": objectKeyArray,
                 "fields": "UUID"
@@ -187,7 +189,7 @@ async function extractData(client:Client, counts:Map<string, number>, SubAllActi
                     let contactsResult: any = await papiClient.get(`${contactsURL}`);
                     //let y= filteredArray[index];
                     //checking if transaction UUID is in UUIDs array (of transactions not of type package)
-                    const isOfTypePackage = transactionNotPackage.find(element => element['UUID'] == filteredArray[index]);
+                    const isOfTypePackage = transactionNotPackage.find(element => element['UUID'] == uuidKeyMapping.get(auditLogs[index]['UUID']));
                     
                     let isPackage: boolean;
                     (isOfTypePackage!=undefined) ? (isPackage = false) : (isPackage = true)
