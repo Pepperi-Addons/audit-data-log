@@ -8,7 +8,7 @@ import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
 
-export async function getCreatedObjectsCount(client){
+export async function transactions_and_activities_data(client){
     let CPapiUsage= new CPAPIUsage(client);
     let createdObjectMap= await CPapiUsage.calculateLastDayUsage();
     let Resource:any[]= [];
