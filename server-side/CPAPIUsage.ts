@@ -3,20 +3,21 @@ import { CreatedObject } from './createdObject';
 import peach from 'parallel-each';
 import { ActivitiesCount } from './activitiesCount';
 
-const activitiesCount= new ActivitiesCount();
+const activitiesCount = new ActivitiesCount();
 
 export class CPAPIUsage{
     m_papiClient;
-    m_cpapiCreatedObjects: createdObject[];
+    m_cpapiCreatedObjects: CreatedObject[];
     createdObjectMap: Map<string, number>;
 
-    constructor(client) {
-        this.m_papiClient= client;
-        this.m_cpapiCreatedObjects= [];
+    constructor(client){
+        this.m_papiClient = client;
+        this.m_cpapiCreatedObjects = [];
         this.createdObjectMap = new Map([]);
         this.buildTypeMap();        
     }
 
+    //Creats the data sets of all UserType-ActivyType-Device combinations
     buildTypeMap(){
         let typeMap: string[][] = [['Users', 'Buyers'], ['Activities', 'Transactions', 'Packages'], ['Android', 'iPad', 'iPhone', 'Web']];
         let loopOver = (arr, str = '') => arr[0].map(v => arr.length > 1 ? loopOver(arr.slice(1), str + " " + v) : str + " " + v).flat();
@@ -35,14 +36,15 @@ export class CPAPIUsage{
         await this.addUserTypeToCreatedObjects();
         await this.addActivityTypeToCreatedObjects();
 
-        return this.createObjectsMappping();
+        return this.createObjectsMapping();
     }
-
-    createObjectsMappping(){
+    
+    //perform count by Device+ActivityType+UserType
+    createObjectsMapping(){
         this.m_cpapiCreatedObjects.forEach(createdObject => {
             if(createdObject['UserType'] && createdObject['ActivityType'] && createdObject['DeviceType']){
-                let createdObjectString= `${createdObject['UserType'] +" "+ createdObject['ActivityType']} ${createdObject['DeviceType']}`;
-                let getCreatedObjectValue= this.createdObjectMap.get(createdObjectString);
+                let createdObjectString = `${createdObject['UserType']} ${createdObject['ActivityType']} ${createdObject['DeviceType']}`;
+                let getCreatedObjectValue = this.createdObjectMap.get(createdObjectString);
                 if(getCreatedObjectValue){
                     this.createdObjectMap.set(createdObjectString, getCreatedObjectValue + 1);
                 } else{
@@ -66,15 +68,15 @@ export class CPAPIUsage{
         startTime.setUTCHours(0,0,0);
         endTime.setUTCHours(23,59,59);
 
-        let dateCheck:string = "CreationDateTime>="+startTime.toISOString() +" and CreationDateTime<="+ endTime.toISOString();
-        let params:string = `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${activityType} and ${dateCheck}&fields=ActionUUID,ObjectKey,UserUUID,Resource`;
+        let dateCheck: string = "CreationDateTime>=" + startTime.toISOString() + " and CreationDateTime<=" + endTime.toISOString();
+        let params: string = `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${activityType} and ${dateCheck}&fields=ActionUUID,ObjectKey,UserUUID,Resource`;
         
-        const dataLogUUID: string= this.m_papiClient.AddonUUID;
+        const dataLogUUID: string = this.m_papiClient.AddonUUID;
         const dataLogUrl: string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ params}`;
         const dataLogResult = await papiClient.get(`/addons/api/${dataLogUrl}`);
         
-        const createdObjects: createdObject[] = dataLogResult.map((element:createdObject) => {
-            return new CreatedObject(element.ActionUUID, element.ObjectKey, element.UserUUID, element.Resource)
+        const createdObjects: CreatedObject[] = dataLogResult.map((element:CreatedObject) => {
+            return new CreatedObject(element.ActionUUID, element.ObjectKey, element.UserUUID, element.ActivityType)
         });
 
         this.m_cpapiCreatedObjects.push(...createdObjects);
@@ -90,9 +92,10 @@ export class CPAPIUsage{
     async addDeviceTypeToCreatedObjects (){
         let allElements: any[][]= [];
         let ActionObjectDictionary = new Map<string,any>();
-        let newCreatedObject: createdObject[] = [];
+        let newCreatedObject: CreatedObject[] = [];
         let actionUUIDList: string[] = this.m_cpapiCreatedObjects.map(element => "'" + element.ActionUUID + "'");
 
+        //splitting actionUUIDList to sub arrays of 100 action UUIDs each
         for(let index=0; index < actionUUIDList.length; index+=100){
             let newArrayUUID= actionUUIDList.slice(index,index+100);
             allElements.push(newArrayUUID);
@@ -118,7 +121,7 @@ export class CPAPIUsage{
     // 3.3 scan CreatedObjects - for each CreatedObject check if its UserUUID exists in UserUUIDDictionary, if yes set UserType to "user" else "buyer"
     // after this phase the CreatedObject will have the following fields: ObjectKey, ActionUUID, UserUUID, DeviceType, UserType
     async addUserTypeToCreatedObjects () {
-        let newCreatedObject: createdObject[] = [];
+        let newCreatedObject: CreatedObject[] = [];
         let userUUIDList: string[] = this.m_cpapiCreatedObjects.map(element => element.UserUUID)
         newCreatedObject= await activitiesCount.getAllUsers(this.m_papiClient, this.m_cpapiCreatedObjects, userUUIDList);
         this.m_cpapiCreatedObjects = newCreatedObject;
@@ -130,7 +133,7 @@ export class CPAPIUsage{
     // 4.3 scan CreatedObjects - for each CreatedObject if type transactions, check if its UUID exists in ObjectKeyDictionary, if not set ActivityType to "packages" 
     // after this phase the CreatedObject will have the following fields: ObjectKey, ActionUUID, UserUUID, DeviceType, UserType, ActivityType
     async addActivityTypeToCreatedObjects () {
-        let newCreatedObject: createdObject[] = [];
+        let newCreatedObject: CreatedObject[] = [];
 
         let ObjectKeyList: string[] = [];
         this.m_cpapiCreatedObjects.forEach(element => {
@@ -138,7 +141,7 @@ export class CPAPIUsage{
                 ObjectKeyList.push(element['ObjectKey'])
             }
         });
-        newCreatedObject= await activitiesCount.getTransactions(this.m_papiClient, this.m_cpapiCreatedObjects, ObjectKeyList);
+        newCreatedObject= await activitiesCount.addActivityType(this.m_papiClient, this.m_cpapiCreatedObjects, ObjectKeyList);
         this.m_cpapiCreatedObjects = newCreatedObject;
     }
 }

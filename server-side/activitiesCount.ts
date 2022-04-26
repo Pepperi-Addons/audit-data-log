@@ -1,8 +1,8 @@
-import { Client } from '@pepperi-addons/debug-server'
 import MyService from './my.service';
+import { Client } from '@pepperi-addons/debug-server'
+import { CreatedObject } from './createdObject';
 
 export class ActivitiesCount {
-
     // 2.2 Get all ActionObject from AuditLog (only the specific fields needed) from all of the ActionUUIDList (do it with page by page of 100? each)
     // collect all ActionObjects in container called ActionObjectDictionary (key of ActionUUID of course)
     async getAuditLogData(client: Client, subActionUUIDList: string[], ActionObjectDictionary: Map<string, any>): Promise<void> {
@@ -48,15 +48,15 @@ export class ActivitiesCount {
 
 
     // 3.2 Get all UserObject from papi using the users/search with body (better users since there are more contacts) collect only UserUUID and add them all to UserUUIDDictionary (no need for pagination)
-    async getAllUsers(client: Client, createdObjects: createdObject[], usersUUIDList: string[]) {
+    async getAllUsers(client: Client, createdObjects: CreatedObject[], userUUIDList: string[]) {
         const service = new MyService(client);
         const papiClient = service.papiClient;
         let UserUUIDSet = new Set<string>();
         let UserObjects: any[] = [];
-        let newCreatedObject: createdObject[] = [];
+        let newCreatedObject: CreatedObject[] = [];
 
         let body = {
-            "UUIDList": usersUUIDList,
+            "UUIDList": userUUIDList,
             "fields": "UUID,Profile"
         }
         let usersUrl = "/users/search";
@@ -75,46 +75,47 @@ export class ActivitiesCount {
     }
 
     // 3.3 scan CreatedObjects - for each CreatedObject check if its UserUUID exists in UserUUIDDictionary, if yes set UserType to "user" else "buyer"
-    addUserType(createdObjects, UserUUIDDictionary) {
+    addUserType(createdObjects, UserUUIDSet) {
         return createdObjects.map(createdObject => {
-            UserUUIDDictionary.has(createdObject.UserUUID) ? createdObject.UserType = "Users" : createdObject.UserType = "Buyers";
+            UserUUIDSet.has(createdObject.UserUUID) ? createdObject.UserType = "Users" : createdObject.UserType = "Buyers";
             return createdObject;
         })
     }
 
     // 4.2 Get all TransactionObject from papi using the transactions/search with body collect only UUID and add them all to ObjectKeyDictionary (no need for pagination)
-    async getTransactions(client: Client, createdObjects: createdObject[], ObjectKeyList: string[]) {
+    //Activity type can be transaction/activity/package
+    async addActivityType(client: Client, createdObjects: CreatedObject[], ObjectKeyList: string[]) {
         const service = new MyService(client);
         const papiClient = service.papiClient;
-        let ObjectKeySet = new Set<string>();
-        let UserObjects: any[] = [];
-        let newCreatedObject: createdObject[] = [];
+        let transactionUUIDs = new Set<string>();
+        let TransactionObjects: any[] = [];
+        let newCreatedObject: CreatedObject[] = [];
 
         let body = {
             "UUIDList": ObjectKeyList,
             "fields": "UUID",
             "include_deleted": true
         }
-        let usersUrl = "/transactions/search";
+        let transactionsUrl = "/transactions/search";
         try {
-            UserObjects = await papiClient.post(`${usersUrl}`, body);
-            UserObjects.forEach(UserObject => {
-                ObjectKeySet.add(UserObject['UUID']);
+            TransactionObjects = await papiClient.post(`${transactionsUrl}`, body);
+            TransactionObjects.forEach(TransactionObject => {
+                transactionUUIDs.add(TransactionObject['UUID']);
             });
         }
         catch (ex) {
             console.log("Error:" + `${ex}`);
         }
 
-        newCreatedObject = this.addPackageType(createdObjects, ObjectKeySet);
+        newCreatedObject = this.addType(createdObjects, transactionUUIDs);
         return newCreatedObject;
     }
 
     // 4.3 scan CreatedObjects - for each CreatedObject if type transactions, check if its UUID exists in ObjectKeyDictionary, if not set ActivityType to "packages" 
-    addPackageType(createdObjects, UserUUIDDictionary) {
+    addType(createdObjects, transactionUUIDs) {
         return createdObjects.map(createdObject => {
             if (createdObject.ActivityType == 'transactions') {
-                UserUUIDDictionary.has(createdObject.ObjectKey) ? createdObject.ActivityType = "Transactions" : createdObject.ActivityType = "Pacakges";
+                transactionUUIDs.has(createdObject.ObjectKey) ? createdObject.ActivityType = "Transactions" : createdObject.ActivityType = "Pacakges";
             } else{
                 createdObject.ActivityType = "Activities";
             }
@@ -122,10 +123,3 @@ export class ActivitiesCount {
         })
     }
 }
-
-
-
-
-
-
-

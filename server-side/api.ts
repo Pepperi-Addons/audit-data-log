@@ -9,15 +9,15 @@ import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
 
 export async function transactions_and_activities_data(client){
-    let CPapiUsage= new CPAPIUsage(client);
-    let createdObjectMap= await CPapiUsage.calculateLastDayUsage();
-    let Resource:any[]= [];
+    let CPapiUsage = new CPAPIUsage(client);
+    let createdObjectMap = await CPapiUsage.calculateLastDayUsage();
+    let Resource: any[] = [];
 
-    for(let key of createdObjectMap.keys() ){
+    for(let key of createdObjectMap.keys()){
         let description: string= `${key.split(' ')[1]} created by ${key.split(' ')[0]} in the last day - ${key.split(' ')[2]}`;
         let data: string = `${key.split(' ')[0]} ${key.split(' ')[1]} - ${key.split(' ')[2]}`;
         let value = createdObjectMap.get(key);
-        let resource={
+        let resource = {
             Data:  data,
             Description: description,
             Size: value
@@ -25,7 +25,7 @@ export async function transactions_and_activities_data(client){
         Resource.push(resource);
     }
         
-    let returnObject={
+    let returnObject = {
         "Title": "Usage",
         "Resources": Resource
     }
