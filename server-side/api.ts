@@ -14,7 +14,7 @@ export async function transactions_and_activities_data(client){
     let Resource: any[] = [];
 
     for(let key of createdObjectMap.keys()){
-        let description: string= `${key.split(' ')[1]} created by ${key.split(' ')[0]} in the last day - ${key.split(' ')[2]}`;
+        let description: string= `Number of ${key.split(' ')[1]} on ${key.split(' ')[2]} created by ${key.split(' ')[0]}`;
         let data: string = `${key.split(' ')[0]} ${key.split(' ')[1]} - ${key.split(' ')[2]}`;
         let value = createdObjectMap.get(key);
         let resource = {
