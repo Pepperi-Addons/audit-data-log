@@ -76,7 +76,7 @@ export class CPAPIUsage{
         const dataLogResult = await papiClient.get(`/addons/api/${dataLogUrl}`);
         
         const createdObjects: CreatedObject[] = dataLogResult.map((element:CreatedObject) => {
-            return new CreatedObject(element.ActionUUID, element.ObjectKey, element.UserUUID, element.ActivityType)
+            return new CreatedObject(element.ActionUUID, element.ObjectKey, element.UserUUID, activityType)
         });
 
         this.m_cpapiCreatedObjects.push(...createdObjects);
