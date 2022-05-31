@@ -75,7 +75,6 @@ export class AuditDataLogBlock {
 
     audit_data_log_query(search_string: string, where: string, search_string_fields: string): Observable<any> {
         const params = {};
-        debugger
         if (search_string) {
             params[`search_string`] = search_string;
         }

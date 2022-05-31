@@ -76,7 +76,6 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   private reloadList() {
-    debugger
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.docs = docs;
       this.loadDataLogsList(docs);
@@ -359,8 +358,6 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   onFiltersChange(filtersData: IPepSmartFilterData[]) {
-    debugger
-    debugger
     let filters = [];
     for (const filter of filtersData) {
       switch (filter.operator.componentType[0]) {

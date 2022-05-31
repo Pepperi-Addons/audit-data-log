@@ -71,7 +71,6 @@ export class AuditDataLogBlockComponent implements OnInit {
   }
 
   loadDataLogsList(docs) {
-    debugger;
     const tableData = new Array<PepRowData>();
     docs.forEach((doc) => {
       const userKeys = ["ID", "Type", "UpdatedFields", "User", "ActionDateTime"];
@@ -141,7 +140,6 @@ export class AuditDataLogBlockComponent implements OnInit {
         dataRowField.FormattedValue = dataRowField.Value = actionType;
         break;
       case "UpdatedFields":
-        debugger
         dataRowField.Title = 'Changes';
         const updateFieldStr = this.buildUpdatedFieldsTable(document.UpdatedFields);
         dataRowField.FormattedValue = dataRowField.Value = updateFieldStr;
@@ -172,7 +170,6 @@ export class AuditDataLogBlockComponent implements OnInit {
   }
 
   private buildUpdatedFieldsTable(updatedFields: UpdatedField[]): string {
-    debugger;
     let str = '';
     if (updatedFields && updatedFields.length > 0) {
       str += '<div class="updated-fields">'
