@@ -3,7 +3,7 @@ import { FIELD_TYPE, ObjectsDataRow, PepDataConvertorService, PepFieldData, PepR
 import { IPepMenuItemClickEvent, PepMenuItem } from '@pepperi-addons/ngx-lib/menu';
 import { TranslateService } from '@ngx-translate/core';
 import { DEFAULT_PAGE_SIZE, IPepListPagerChangeEvent, IPepListSortingChangeEvent, IPepListSortingOptionChangeEvent, PepListComponent, PepListPagerType, PepListViewType } from '@pepperi-addons/ngx-lib/list';
-import { AddonService } from '../addon/addon.service';
+import { AuditDataLogBlock } from '../audit-data-log-block/audit-data-log-block.service';
 import { Document, UpdatedField } from '../../../../../shared/models/document'
 import moment from 'moment';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -63,7 +63,7 @@ export class AuditDataLogComponent implements OnInit {
 
   constructor(public translate: TranslateService,
     private dataConvertorService: PepDataConvertorService,
-    private addonService: AddonService,
+    private addonService: AuditDataLogBlock,
     private location: Location,
 
     private router: Router,
@@ -76,6 +76,7 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   private reloadList() {
+    debugger
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.docs = docs;
       this.loadDataLogsList(docs);
@@ -339,7 +340,7 @@ export class AuditDataLogComponent implements OnInit {
 
   private buildUpdatedFieldsTable(updatedFields: UpdatedField[]): string {
     let str = '';
-    if (updatedFields) {
+    if (updatedFields && updatedFields.length > 0) {
       str += '<div class="updated-fields">'
       for (const updateField of updatedFields) {
         str +=
@@ -358,6 +359,8 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   onFiltersChange(filtersData: IPepSmartFilterData[]) {
+    debugger
+    debugger
     let filters = [];
     for (const filter of filtersData) {
       switch (filter.operator.componentType[0]) {

@@ -1,64 +1,59 @@
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
+const mf = require("@angular-architects/module-federation/webpack");
+const path = require("path");
+const share = mf.share;
 const singleSpaAngularWebpack = require('single-spa-angular/lib/webpack').default;
 const { merge } = require('webpack-merge');
-// const deps = require('./package.json').dependencies;
-const webpack = require('webpack');
-const TerserPlugin = require('terser-webpack-plugin');
-module.exports = (angularWebpackConfig, options, env) => {
 
-  angularWebpackConfig.plugins.push(
-        new webpack.DefinePlugin({
-          CLIENT_MODE: JSON.stringify(env.configuration),
-        })
-    )
+// file_name should be lowercase and if it more then one word put '_' between them,
+const addonConfig = require('../addon.config.json');
+const filename = `file_${addonConfig.AddonUUID.replace(/-/g, '_').toLowerCase()}`;
 
-    if (env.configuration === 'Standalone') {
-        return angularWebpackConfig;
-    }
-    else {
+const sharedMappings = new mf.SharedMappings();
+sharedMappings.register(
+    path.join(__dirname, './tsconfig.json'),
+    [
+        /* mapped paths to share */
+    ]);
 
-        const mfConfig = {
+module.exports = (config, options, env) => {
+    const mfConfig = {
         output: {
-          uniqueName: "addon"
+            uniqueName: `${filename}`,
+            publicPath: "auto",
         },
-         optimization: {
-          // Only needed to bypass a temporary bug
-          runtimeChunk: false,
-          minimize: true,
-          minimizer: [
-          new TerserPlugin({
-            extractComments: false,
-            terserOptions: {keep_fnames: /^.$/}
-          })]
-
-        },
-        externals: {
-        //   'react': 'React'
+        optimization: {
+            // Only needed to bypass a temporary bug
+            runtimeChunk: false
+        },   
+        resolve: {
+            alias: {
+            ...sharedMappings.getAliases(),
+            }
         },
         plugins: [
-        //   new webpack.DefinePlugin({
-        //     'process.env.NODE_ENV': JSON.stringify('development')
-        // }),
-          new ModuleFederationPlugin({
-            remotes: {},
-            name: "addon",
-            filename: "addon.js",
-            exposes: {
-             './AddonModule': './src/app/components/addon/index.ts',
-              './AddonComponent': './src/app/components/addon/index.ts',
-
-            },
-            shared: {
-              // ...deps,
-              "@angular/core": { eager: true, singleton: true,  strictVersion: false  },
-              "@angular/common": { eager: true,singleton: true,strictVersion: false   },
-            }
-          }),
+            new ModuleFederationPlugin({
+                name: `${filename}`,
+                filename: `${filename}.js`,
+                exposes: {
+                  './AuditDataLogBlockModule': './src/app/components/audit-data-log-block/index.ts',
+                },
+                shared: share({
+                    "@angular/core": { eager: true, singleton: true, strictVersion: true, requiredVersion: 'auto' },
+                    "@angular/common": { eager: true, singleton: true, strictVersion: true, requiredVersion: 'auto' }, 
+                    "@angular/common/http": { eager: true, singleton: true, strictVersion: true, requiredVersion: 'auto' }, 
+                    "@angular/router": { eager: true, singleton: true, strictVersion: true, requiredVersion: 'auto' },
+                    
+                    ...sharedMappings.getDescriptors()
+                })
+            }),
+            sharedMappings.getPlugin()
         ],
-          };
-
-        const merged = merge(angularWebpackConfig, mfConfig);
-        const singleSpaWebpackConfig = singleSpaAngularWebpack(merged, options);
-        return singleSpaWebpackConfig;
     }
+
+    const merged = merge(config, mfConfig);
+    const singleSpaWebpackConfig = singleSpaAngularWebpack(merged, options);
+    singleSpaWebpackConfig.entry.main = [...new Set(singleSpaWebpackConfig.entry.main)];
+    return singleSpaWebpackConfig;
+    // Feel free to modify this webpack config however you'd like to
 };

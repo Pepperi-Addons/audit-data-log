@@ -13,11 +13,11 @@ import { BehaviorSubject, Observable } from 'rxjs';
 // import { PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
 // import {AddonUUID} from '../../../../../addon.config.json';
 @Injectable({ providedIn: 'root' })
-export class AddonService {
+export class AuditDataLogBlock {
     accessToken = '';
     parsedToken: any
     papiBaseURL = ''
-    addonUUID;
+    addonUUID = '00000000-0000-0000-0000-00000da1a109';
     isSupportAdminUser: boolean = true;
 
 
@@ -75,6 +75,7 @@ export class AddonService {
 
     audit_data_log_query(search_string: string, where: string, search_string_fields: string): Observable<any> {
         const params = {};
+        debugger
         if (search_string) {
             params[`search_string`] = search_string;
         }

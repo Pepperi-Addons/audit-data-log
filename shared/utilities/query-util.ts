@@ -89,6 +89,7 @@ export default class QueryUtil {
     }
 
     static buildWhereClauseByDateField(filter) {
+        debugger
         const dateRange = QueryUtil.getStartAndEndDateTimeByFilter(filter);
         const whereClause = `ObjectModificationDateTime>=${dateRange.StartDateTime.toISOString()} and ObjectModificationDateTime<=${dateRange.EndDateTime.toISOString()}`;
         return whereClause;

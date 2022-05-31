@@ -7,14 +7,15 @@ import { AppRoutingModule } from './app.routes';
 import { AppComponent } from './app.component';
 import { PepUIModule } from './modules/pepperi.module';
 import { MaterialModule } from './modules/material.module';
-import { AddonModule } from './components/addon/index';
 import { CloudWatchLogsComponent } from './components/cloud-watch-logs/cloud-watch-logs.component';
-import { AddonService } from './components/addon/addon.service';
+import { AuditDataLogComponent } from './components/audit-data-log/audit-data-log.component';
+import { AuditDataLogBlockModule } from './components/audit-data-log-block/audit-data-log-block.module';
 
 @NgModule({
     declarations: [
         AppComponent,
         CloudWatchLogsComponent,
+        AuditDataLogComponent
     ],
     imports: [
         BrowserModule,
@@ -22,7 +23,7 @@ import { AddonService } from './components/addon/addon.service';
         AppRoutingModule,
         PepUIModule,
         MaterialModule,
-        AddonModule
+        AuditDataLogBlockModule
     ],
     providers: [],
     bootstrap: [AppComponent]

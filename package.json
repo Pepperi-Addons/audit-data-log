@@ -15,7 +15,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@pepperi-addons/papi-sdk": "^1.29.5",
     "@pepperi-addons/scripts": "^2.0.4",
-    "@pepperi-addons/system-addon-utils": "file:../system-addon-utils/system-addon-utils"
+    "@pepperi-addons/system-addon-utils": "file:../system-addon-utils/system-addon-utils",
+    "lodash": "^4.17.21",
+    "parallel-each": "^1.1.7"
   }
 }
