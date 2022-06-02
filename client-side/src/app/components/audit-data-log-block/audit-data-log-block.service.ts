@@ -17,7 +17,7 @@ export class AuditDataLogBlock {
     accessToken = '';
     parsedToken: any
     papiBaseURL = ''
-    addonUUID = '00000000-0000-0000-0000-00000da1a109';
+    addonUUID;
     isSupportAdminUser: boolean = true;
 
 
