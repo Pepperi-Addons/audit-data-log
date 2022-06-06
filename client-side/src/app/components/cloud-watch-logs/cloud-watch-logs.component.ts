@@ -5,7 +5,7 @@ import { FIELD_TYPE, PepDataConvertorService, PepFieldData, PepRowData, UIContro
 import { DEFAULT_PAGE_SIZE, IPepListPagerChangeEvent, IPepListSortingChangeEvent, PepListComponent, PepListPagerType, PepListViewType } from '@pepperi-addons/ngx-lib/list';
 import { IPepMenuItemClickEvent, PepMenuItem } from '@pepperi-addons/ngx-lib/menu';
 import { createSmartFilterField, IPepSmartFilterData, IPepSmartFilterField, IPepSmartFilterFieldOption, PepSmartFilterOperatorType } from '@pepperi-addons/ngx-lib/smart-filters';
-import { AddonService } from '../addon/addon.service';
+import { AuditDataLogBlock } from '../audit-data-log-block/audit-data-log-block.service';
 import { Document, UpdatedField } from '../../../../../shared/models/document'
 import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
 import QueryUtil from '../../../../../shared/utilities/query-util';
@@ -69,7 +69,7 @@ export class CloudWatchLogsComponent implements OnInit {
 
   constructor(public translate: TranslateService,
     private dataConvertorService: PepDataConvertorService,
-    private addonService: AddonService,
+    private addonService: AuditDataLogBlock,
     public routeParams: ActivatedRoute) {
     this.addonService.addonUUID = this.routeParams.snapshot.params['addon_uuid'];
     this.searchStringFields = "Message";

@@ -50,21 +50,39 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
     const papiClient = service.papiClient;
     let addonUUID= "00000000-0000-0000-0000-00000da1a109";
 
-    let relation:Relation={
+    let relation: Relation={
         "RelationName": "UsageMonitor",
         "AddonUUID": addonUUID,
         "Name": "transactionsAndActivities",
         "Type": "AddonAPI",
         "AddonRelativeURL":"/api/transactions_and_activities_data",
         "AggregationFunction": "SUM"
-    
     }
+
+    const blockName = 'Audit_Data_Log';
+
+    const filename = `file_${client.AddonUUID.replace(/-/g, '_').toLowerCase()}`;
+
+    const pageComponentRelation: Relation = {
+        RelationName: 'AddonBlock',
+        Name: blockName,
+        Description: `${blockName} block`,
+        Type: "NgComponent",
+        SubType: "NG11",
+        AddonUUID: client.AddonUUID,
+        AddonRelativeURL: filename,
+        ComponentName: `AuditDataLogBlockComponent`, // This is should be the block component name (from the client-side)
+        ModuleName: `AuditDataLogBlockModule`, // This is should be the block module name (from the client-side)
+    };
+
     const subscription = await service.papiClient.notification.subscriptions.find({ where: `Name='AuditDataLog'` });
     if (subscription.length === 0) {
         await insertSubscription(client, service);
     }
     try{
         await papiClient.addons.data.relations.upsert(relation);
+        await papiClient.addons.data.relations.upsert(pageComponentRelation);
+
     }
     catch(ex){
         console.log(`upsertRelation: ${ex}`);

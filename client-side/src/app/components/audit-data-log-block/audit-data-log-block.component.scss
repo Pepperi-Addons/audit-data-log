@@ -1,0 +1,60 @@
+.text-bold {
+    font-weight: bold;
+}
+#list {
+    ::ng-deep {
+        .table-body .table-row,
+        .table-body .table-row fieldset {
+            height: auto;
+            font-size: var(--pep-font-size-sm, 0.875rem) !important ;
+        }
+        #UpdatedFields {
+            width: 100%;
+        }
+        .updated-fields {
+            list-style: none;
+        }
+        .updated-field {
+            font-size: var(--pep-font-size-xs);
+            p {
+                margin: 0.1rem 0 0.3rem;
+            }
+            &__item {
+                display: flex;
+                flex-direction: row;
+                gap: 0.5rem;
+                max-width: 100%;
+                margin-bottom: 0.75rem;
+                p {
+                    margin: 0;
+                    max-width: calc(50% - 0.75rem);
+                    line-break: anywhere;
+                }
+                svg {
+                    width: 0.75rem;
+                    height: 0.75rem;
+                }
+            }
+        }
+        .custom-span{
+            display: block;
+            text-anchor: end;
+            box-sizing: border-box;
+            -ms-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            width: 100%;
+
+        }
+        .card-flex-container{
+            display: block;
+        }
+
+    }
+}
+// .list-wrapper {
+//     overflow: auto;
+//     height: calc(100vh - calc(#{$header-height} + #{$top-bar-height} + #{$content-margin}));
+//     width: 100%;
+// }

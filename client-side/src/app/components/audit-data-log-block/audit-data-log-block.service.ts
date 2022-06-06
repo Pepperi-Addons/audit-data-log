@@ -13,7 +13,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 // import { PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
 // import {AddonUUID} from '../../../../../addon.config.json';
 @Injectable({ providedIn: 'root' })
-export class AddonService {
+export class AuditDataLogBlock {
     accessToken = '';
     parsedToken: any
     papiBaseURL = ''
