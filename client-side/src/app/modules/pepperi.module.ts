@@ -127,9 +127,9 @@ const pepperiComponentsModules = [
     PepSearchModule
 ];
 
-import { TranslateModule, TranslateLoader, TranslateService } from '@ngx-translate/core';
-import { TranslateHttpLoader } from '@ngx-translate/http-loader';
-import { MultiTranslateHttpLoader } from 'ngx-translate-multi-http-loader';
+// import { TranslateModule, TranslateLoader, TranslateService } from '@ngx-translate/core';
+// import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+// import { MultiTranslateHttpLoader } from 'ngx-translate-multi-http-loader';
 import { PepSmartFiltersModule } from '@pepperi-addons/ngx-lib/smart-filters';
 import { PepSearchModule } from '@pepperi-addons/ngx-lib/search';
 
@@ -140,13 +140,13 @@ import { PepSearchModule } from '@pepperi-addons/ngx-lib/search';
         MaterialModule,
         PepNgxLibModule,
         pepperiComponentsModules,
-        TranslateModule.forRoot({
-            loader: {              
-                provide: TranslateLoader,
-                useFactory: PepAddonService.createDefaultMultiTranslateLoader,
-                deps: [HttpClient, PepFileService, PepAddonService]
-            }
-        })
+        // TranslateModule.forRoot({
+        //     loader: {              
+        //         provide: TranslateLoader,
+        //         useFactory: PepAddonService.createDefaultMultiTranslateLoader,
+        //         deps: [HttpClient, PepFileService, PepAddonService]
+        //     }
+        // })
     ],
     exports: [
         PepNgxLibModule,
@@ -157,11 +157,11 @@ import { PepSearchModule } from '@pepperi-addons/ngx-lib/search';
 export class PepUIModule {  
 
     constructor(
-        translate: TranslateService,
+        // translate: TranslateService,
         private pepperiIconRegistry: PepIconRegistry,
-        private pepAddonService: PepAddonService
+        // private pepAddonService: PepAddonService
     ) {
         this.pepperiIconRegistry.registerIcons(pepIcons);
-        this.pepAddonService.setDefaultTranslateLang(translate);
+        // this.pepAddonService.setDefaultTranslateLang(translate);
     }
 }

@@ -274,7 +274,7 @@ export class AuditDataLogComponent implements OnInit {
     };
     const user = this.users.find(u => u.UUID === document.UserUUID);
     const email = user ? user.Email : 'Pepperi Admin';
-    const href = 'settings/' + this.addonService.addonUUID + '/logs';
+    const href = 'settingsSectionName/' + this.addonService.addonUUID + '/logs';
     //target="_blank" rel="noopener noreferrer"
     switch (key) {
       case "ID":
@@ -416,7 +416,7 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   onCustomizeFieldClick(fieldClickEvent: IPepFormFieldClickEvent) {
-    let href = `/settings/${this.addonService.addonUUID}/logs?`;
+    let href = `/settingsSectionName/${this.addonService.addonUUID}/logs?`;
     if (fieldClickEvent.key === 'Resource') {
       href += `addon_uuid=${fieldClickEvent.value}`
     } if (fieldClickEvent.key === 'ID') {

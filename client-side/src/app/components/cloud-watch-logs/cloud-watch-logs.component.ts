@@ -9,8 +9,6 @@ import { AuditDataLogBlock } from '../audit-data-log-block/audit-data-log-block.
 import { Document, UpdatedField } from '../../../../../shared/models/document'
 import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
 import QueryUtil from '../../../../../shared/utilities/query-util';
-import { PepDialogActionButton, PepDialogData, PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
-import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
 import { forkJoin } from 'rxjs';
 declare var angular: any;
 

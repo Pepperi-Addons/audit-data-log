@@ -123,7 +123,7 @@ export class AuditDataLogBlockComponent implements OnInit {
     };
     const user = this.users.find(u => u.UUID === document.UserUUID);
     const email = user ? user.Email : 'Pepperi Admin';
-    const href = 'settings/' + this.addonService.addonUUID + '/logs';
+    const href = 'settingsSectionName/' + this.addonService.addonUUID + '/logs';
     //target="_blank" rel="noopener noreferrer"
     switch (key) {
       case "ID":

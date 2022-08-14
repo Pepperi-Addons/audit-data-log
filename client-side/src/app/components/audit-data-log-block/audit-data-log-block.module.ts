@@ -9,6 +9,7 @@ import { TranslateLoader, TranslateModule, TranslateService, TranslateStore } fr
 import { PepAddonService } from '@pepperi-addons/ngx-lib';
 import { PepPageLayoutModule } from '@pepperi-addons/ngx-lib/page-layout';
 import { PepListModule } from '@pepperi-addons/ngx-lib/list';
+import { config } from 'src/app/addon.config';
 
 @NgModule({
     declarations: [
@@ -25,11 +26,10 @@ import { PepListModule } from '@pepperi-addons/ngx-lib/list';
             loader: {
                 provide: TranslateLoader,
                 useFactory: (addonService: PepAddonService) => 
-                    PepAddonService.createMultiTranslateLoader(addonService, ['ngx-lib', 'ngx-composite-lib']),
+                    PepAddonService.createMultiTranslateLoader(config.AddonUUID, addonService, ['ngx-lib', 'ngx-composite-lib']),
                 deps: [PepAddonService]
-            }
+            }, isolate: false
         }),
-
     ],
     exports: [AuditDataLogBlockComponent],
     providers: [
