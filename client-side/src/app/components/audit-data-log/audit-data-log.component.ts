@@ -26,6 +26,7 @@ import { IPepFormFieldClickEvent } from '@pepperi-addons/ngx-lib/form';
 import { data } from 'jquery';
 import { NIL as NIL_UUID } from 'uuid';
 import jwtDecode from 'jwt-decode';
+import { config } from 'src/app/addon.config';
 
 @Component({
   selector: 'addon-audit-data-log',
@@ -69,7 +70,7 @@ export class AuditDataLogComponent implements OnInit {
     private router: Router,
     public routeParams: ActivatedRoute) {
     this.searchStringFields = 'ActionUUID.keyword,ObjectKey.keyword,UpdatedFields.FieldID,UpdatedFields.NewValue,UpdatedFields.OldValue';
-    this.addonService.addonUUID = this.routeParams.snapshot.params['addon_uuid'];
+    this.addonService.addonUUID = config.AddonUUID;
   }
 
   ngAfterViewInit(): void {
