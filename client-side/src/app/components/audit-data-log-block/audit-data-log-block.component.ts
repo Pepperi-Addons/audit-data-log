@@ -30,9 +30,9 @@ export class AuditDataLogBlockComponent implements OnInit {
       this._hostObject = value;
 
       if (value) {
-          this.AddonUUID = value.dataLogHostObject['AddonUUID'];
-          this.ObjectKey = value.dataLogHostObject['ObjectKey'];
-          this.Resource = value.dataLogHostObject['Resource'];
+          this.AddonUUID = value['AddonUUID'];
+          this.ObjectKey = value['ObjectKey'];
+          this.Resource = value['Resource'];
       }
   }
 
