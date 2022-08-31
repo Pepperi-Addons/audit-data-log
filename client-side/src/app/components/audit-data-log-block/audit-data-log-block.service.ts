@@ -10,14 +10,13 @@ import {
 } from '@pepperi-addons/ngx-lib';
 import { PepDialogActionButton, PepDialogData, PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
 import { BehaviorSubject, Observable } from 'rxjs';
-// import { PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
-// import {AddonUUID} from '../../../../../addon.config.json';
+import { config } from '../../addon.config';
 @Injectable({ providedIn: 'root' })
 export class AuditDataLogBlock {
     accessToken = '';
     parsedToken: any
     papiBaseURL = ''
-    addonUUID;
+    addonUUID = config.AddonUUID;
     isSupportAdminUser: boolean = true;
 
 
