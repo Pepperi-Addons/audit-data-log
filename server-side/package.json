@@ -31,6 +31,8 @@
         "@pepperi-addons/debug-server": "0.0.30",
         "@pepperi-addons/papi-sdk": "^1.29.5",
         "@pepperi-addons/system-addon-utils": "^1.0.4",
+        "lodash": "^4.17.21",
+        "parallel-each": "^1.1.7",
         "aws-sdk": "^2.899.0",
         "jwt-decode": "^3.1.2",
         "uuid": "^8.3.2"
