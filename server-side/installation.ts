@@ -77,6 +77,22 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
         ElementName: `block-element-${addonUUID}`,
     };
 
+    const blockNewName = 'AuditDataLog';
+
+    const pageComponentRelationChangedName: Relation = {
+        RelationName: 'AddonBlock',
+        Name: blockNewName,
+        Description: `${blockName} block`,
+        Type: "NgComponent",
+        SubType: "NG14",
+        AddonUUID: client.AddonUUID,
+        AddonRelativeURL: filename,
+        ComponentName: `AuditDataLogBlockComponent`, // This is should be the block component name (from the client-side)
+        ModuleName: `AuditDataLogBlockModule`, // This is should be the block module name (from the client-side)
+        ElementsModule: 'WebComponents',
+        ElementName: `block-element-${addonUUID}`,
+    };
+
     const settingsRelation: Relation = {
         RelationName: "SettingsBlock",
         GroupName: 'Audit Data Log',
@@ -101,6 +117,8 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
     try{
         await papiClient.addons.data.relations.upsert(relation);
         await papiClient.addons.data.relations.upsert(pageComponentRelation);
+        await papiClient.addons.data.relations.upsert(pageComponentRelationChangedName);
+
         await papiClient.addons.data.relations.upsert(settingsRelation);
     }
     catch(ex){
