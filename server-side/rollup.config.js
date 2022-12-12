@@ -25,7 +25,9 @@ export default config.Endpoints.map(endpoint => {
              }
           }),
           resolve(),
-          commonjs(),
+          commonjs({
+            ignore: ["aws-sdk"],
+          }),
           json()
         ]
        }
