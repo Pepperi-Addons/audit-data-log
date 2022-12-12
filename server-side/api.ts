@@ -7,7 +7,6 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
-import { clearTimeout } from 'timers';
 
 export async function transactions_and_activities_data(client) {
     let CPapiUsage = new CPAPIUsage(client);
@@ -86,7 +85,7 @@ export async function write_data_log_to_elastic_search(client: Client, request: 
     console.log(`finish write data log to elastic search ActionUUID:${body.Message.ActionUUID}`);
 
 };
-interface AsyncRespond { success: boolean, resultObject: any, errorMessage?: undefined };
+interface AsyncResponse { success: boolean, resultObject: any, errorMessage?: undefined };
 
 export async function post_to_elastic_search(client: Client, request: Request) {
 
@@ -95,15 +94,15 @@ export async function post_to_elastic_search(client: Client, request: Request) {
     const method = 'POST';
 
     // we wait as much as we can without killing the lambda (lambda timeout is 30 seconds)
-    const maxWaitingForElastinc = 28000;
+    const maxWaitingForElastic = 28000;
     let timer: NodeJS.Timeout | undefined;
     // this promise will never be resolved only rejected with exception
-    const timeoutPromise: Promise<AsyncRespond> = new Promise((_resolve, reject) => {
+    const timeoutPromise: Promise<AsyncResponse> = new Promise((_resolve, reject) => {
         timer = setTimeout(() => {
-            const msg: string = `Done waiting on elastic to write audit logs for ${maxWaitingForElastinc / 1000} seconds`;
+            const msg: string = `Done waiting on elastic to write audit logs for ${maxWaitingForElastic / 1000} seconds`;
             console.error(msg)
             reject(new Error(msg))
-        }, maxWaitingForElastinc);
+        }, maxWaitingForElastic);
     })
     // call elastic - main line :)
     const elasticPromise = callElasticSearchLambda(endpoint, method, body, "application/x-ndjson");
