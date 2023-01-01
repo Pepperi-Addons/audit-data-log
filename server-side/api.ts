@@ -8,23 +8,23 @@ import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
 
-export async function transactions_and_activities_data(client){
+export async function transactions_and_activities_data(client) {
     let CPapiUsage = new CPAPIUsage(client);
     let createdObjectMap = await CPapiUsage.calculateLastDayUsage();
     let Resource: any[] = [];
 
-    for(let key of createdObjectMap.keys()){
-        let description: string= `Number of ${key.split(' ')[1]} on ${key.split(' ')[2]} created by ${key.split(' ')[0]}`;
+    for (let key of createdObjectMap.keys()) {
+        let description: string = `Number of ${key.split(' ')[1]} on ${key.split(' ')[2]} created by ${key.split(' ')[0]}`;
         let data: string = `${key.split(' ')[0]} ${key.split(' ')[1]} - ${key.split(' ')[2]}`;
         let value = createdObjectMap.get(key);
         let resource = {
-            Data:  data,
+            Data: data,
             Description: description,
             Size: value
         };
         Resource.push(resource);
     }
-        
+
     let returnObject = {
         "Title": "Usage",
         "Resources": Resource
@@ -35,12 +35,11 @@ export async function transactions_and_activities_data(client){
 
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
-    
 
-    const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
-    console.log("start write data log to elastic search");
-    const service = new MyService(client);
     let body = request.body;
+    console.log(`start write data log to elastic search ActionUUID:${body.Message.ActionUUID}`);
+    const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
+    const service = new MyService(client);
 
     const dateString = new Date().toISOString();
     let bulkBody = new Array();
@@ -83,9 +82,10 @@ export async function write_data_log_to_elastic_search(client: Client, request: 
     };
     const response = await service.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
 
-    console.log(`finish write data log to elastic search`);
+    console.log(`finish write data log to elastic search ActionUUID:${body.Message.ActionUUID}`);
 
 };
+interface AsyncResponse { success: boolean, resultObject: any, errorMessage?: undefined };
 
 export async function post_to_elastic_search(client: Client, request: Request) {
 
@@ -93,16 +93,39 @@ export async function post_to_elastic_search(client: Client, request: Request) {
     const endpoint = `/${Constants.AUDIT_DATA_LOG_INDEX}/_bulk`
     const method = 'POST';
 
-    const response = await callElasticSearchLambda(endpoint, method, body, "application/x-ndjson");
-
+    // we wait as much as we can without killing the lambda (lambda timeout is 30 seconds)
+    const maxWaitingForElastic = 28000;
+    let timer: NodeJS.Timeout | undefined;
+    // this promise will never be resolved only rejected with exception
+    const timeoutPromise: Promise<AsyncResponse> = new Promise((_resolve, reject) => {
+        timer = setTimeout(() => {
+            const msg: string = `Done waiting on elastic to write audit logs for ${maxWaitingForElastic / 1000} seconds`;
+            console.error(msg)
+            reject(new Error(msg))
+        }, maxWaitingForElastic);
+    })
+    // call elastic - main line :)
+    const elasticPromise = callElasticSearchLambda(endpoint, method, body, "application/x-ndjson");
+    let response = await Promise.race([elasticPromise, timeoutPromise]);
+    // if we reach here 
+    // 1. response has a returned value from elastic (otherwise we will get exception)
+    // 2. timer must have a value 
+    if (timer != undefined) {
+        console.log("clearing timeout as audit log write succeded");
+        clearTimeout(timer);
+    }
+    else {
+        console.error("NOTE and investigate: Cannot clear timeout even when elastic audit log write succeded")
+    }
     if (!response.success) {
-        throw new Error(response["errorMessage"]);
+        throw new Error(response.errorMessage);
     }
 
     if (response.resultObject.error) {
         throw new Error(response.resultObject.error.reason + ". " + response.resultObject.error.details);
     }
 }
+
 
 export async function audit_data_logs(client: Client, request: Request) {
 
@@ -189,12 +212,12 @@ export async function audit_data_logs(client: Client, request: Request) {
 
         return docs;
     }
-    
+
     catch (e) {
         console.log(`error in audit_data_log: ${(e as Error).message}`);
         throw new Error((e as Error).message);
     }
-    
+
 };
 
 export async function filters(client: Client, request: Request) {
@@ -311,8 +334,8 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
 
     try {
         const AWS = require('aws-sdk');
-        
-       
+
+
         const cwl = new AWS.CloudWatchLogs();
         let logGroupsNames: string[] = request.query.log_groups ? request.query.log_groups.split(',') : undefined;
 
@@ -341,10 +364,10 @@ export async function get_logs_from_cloud_watch(client: Client, request: Request
         return queryResults;
     }
     catch (err) {
-        
+
         console.log(`APIAddon getAddonsUsageFromCWL failed with err: ${(err as Error).message}`);
         return err;
-        
+
     }
 };
 
@@ -352,7 +375,7 @@ export async function get_stats_from_cloud_watch(client: Client, request: Reques
     // return query response of a this query to cloud watch
     try {
         const AWS = require('aws-sdk');
-        
+
         const cwl = new AWS.CloudWatchLogs();
 
         // query params
