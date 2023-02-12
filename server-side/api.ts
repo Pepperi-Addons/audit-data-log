@@ -9,7 +9,6 @@ import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
 import { ComputingTime } from './compute-functions-running-time.service'
 
-
 // get functions computing time from elastic
 export async function get_functions_computing_time_from_elastic(client: Client, request: Request){
     const computingTime = new ComputingTime(client);
