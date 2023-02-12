@@ -130,6 +130,7 @@ export class ComputingTime{
             "size": 1000
         }
         
+        
         try{
             console.log(`About to search data in elastic, requested date: ${timestamp}, elastic requested URL: ${elasticEndpoint}`);
             const res = await callElasticSearchLambda(elasticEndpoint, 'POST', requestBody);
