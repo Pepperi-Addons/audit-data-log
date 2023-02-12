@@ -8,9 +8,22 @@ import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
 import { ComputingTime } from './compute-functions-running-time.service'
+import { PapiClient } from '@pepperi-addons/papi-sdk';
 
 // get functions computing time from elastic
-export async function get_functions_computing_time_from_elastic(client: Client, request: Request){
+export async function get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<any> {
+    let papiClient = new PapiClient({
+        baseURL: client.BaseURL,
+        token: client.OAuthAccessToken,
+        addonUUID: client.AddonUUID,
+        addonSecretKey: client.AddonSecretKey,
+        actionUUID: client.ActionUUID
+    });
+    return await papiClient.addons.api.uuid(client.AddonUUID).file('api').func('getComputingTimeData').post();
+    
+}
+
+export async function getComputingTimeData(client: Client, request: Request){
     const computingTime = new ComputingTime(client);
 
     const resource = await computingTime.insertComputedTimeDataFromElastic();
