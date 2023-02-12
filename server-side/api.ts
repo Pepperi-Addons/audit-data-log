@@ -7,6 +7,20 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
+import { ComputingTime } from './compute-functions-running-time.service'
+
+
+// get functions computing time from elastic
+export async function get_functions_computing_time_from_elastic(client: Client, request: Request){
+    const computingTime = new ComputingTime(client);
+
+    const resource = await computingTime.insertComputedTimeDataFromElastic();
+    let returnObject = {
+        "Title": "Computing Time",
+        "Resources": resource
+    }
+    return returnObject;
+}
 
 export async function transactions_and_activities_data(client){
     let CPapiUsage = new CPAPIUsage(client);
