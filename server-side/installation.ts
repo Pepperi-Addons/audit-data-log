@@ -11,6 +11,7 @@ The error Message is importent! it will be written in the audit log and help the
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { Relation, Subscription } from '@pepperi-addons/papi-sdk';
 import MyService from './my.service';
+import PermissionManager from './permissionManager.service';
 
 const transactionActivitiesRelationName = "TransactionActivitiesRelation";
 const computingTimeRelationName = "ComputingTime";
@@ -18,9 +19,12 @@ const computingTimeRelationName = "ComputingTime";
 
 export async function install(client: Client, request: Request): Promise<any> {
     const service = new MyService(client);
+    const permissionService = new PermissionManager(client);
+
     const papiClient = service.papiClient;
     await createUsageMonitorRelation(papiClient, client.AddonUUID)
     await insertSubscription(client, service);
+    await permissionService.upsertPermissions();
     return { success: true, resultObject: {} }
 }
 
@@ -53,11 +57,12 @@ export async function uninstall(client: Client, request: Request): Promise<any> 
 
 export async function upgrade(client: Client, request: Request): Promise<any> {
     const service = new MyService(client);
+    const permissionService = new PermissionManager(client);
     const papiClient = service.papiClient;
+    await permissionService.upsertPermissions();
+
     let addonUUID= "00000000-0000-0000-0000-00000da1a109";
-
     const blockName = 'Audit_Data_Log';
-
     const filename = `file_${client.AddonUUID}`;
 
     const pageComponentRelation: Relation = {

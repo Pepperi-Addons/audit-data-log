@@ -27,7 +27,6 @@ export class ComputingTime{
     papiClient: PapiClient;
     relationResultObject: relationResultType[] = []; // the data sent to the relation
     addonNameMap = new Map<string, string>(); // for mapping addon uuid to addon name
-    functionDurationMap = new Map<string, addonNameDurationObject>(); // for mapping function to its duration; key- functionName_AddonUUID, value- function duration, addonUUID, functionName
     distributorUUID: string;
 
     constructor(private client: Client) {
@@ -42,7 +41,8 @@ export class ComputingTime{
         this.distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     }
     
-    async insertComputedTimeDataFromElastic(){   
+    async getComputingTime(){ 
+        let functionDurationMap = new Map<string, addonNameDurationObject>(); // for mapping function to its duration; key- functionName_AddonUUID, value- function duration, addonUUID, functionName  
         try{
             let res = await this.getComputedTimeDataFromElastic();
             if(res.success){
@@ -52,29 +52,31 @@ export class ComputingTime{
                     const addonUUID = element['_source']['AuditInfo']['JobMessageData']['AddonUUID'];
                     const duration = element['_source']['AuditInfo']['JobMessageData']['Duration'];
 
-                    this.updateDurationMap(`${functionName}_${addonUUID}`, duration, addonUUID, functionName); // update functionDurationMap
+                    this.updateDurationMap(functionDurationMap, `${functionName}_${addonUUID}`, duration, addonUUID, functionName); // update functionDurationMap
                     this.updateAddonsMapping(addonUUID); // update addonNameMap- insert all addonUUIDs to the map as a key
                 });
                 await this.getAddons();  // extract all addonUUIDs and update addonNameMap- insert all addon Names to the map as a value
-                this.functionDurationMap.forEach((value) => { // create relation result object which will be the data sent to the relation
+                functionDurationMap.forEach((value) => { // create relation result object which will be the data sent to the relation
                     const name = `${value.FunctionName}_${this.addonNameMap.get(value.AddonUUID)}`;
-                    this.createRelationData(this.relationResultObject, name, value.Duration);
+                    this.upsertRelationData(this.relationResultObject, name, value.Duration);
                 })
                 return this.relationResultObject;
             }
         } catch(err){
-            throw new Error(`insertComputedTimeDataFromElastic, error: ${err}`);
+            throw new Error(`getComputingTime function, error: ${err}`);
         }
     }
 
-    updateDurationMap(key: string, value: number, addonUUID: string, functionName: string){
-        if(this.functionDurationMap.has(key)){ // update the entry
-            const addonNameDurationMap: addonNameDurationObject =  this.functionDurationMap.get(key)!;
+    updateDurationMap(functionDurationMap: Map<string, addonNameDurationObject>, key: string, value: number, addonUUID: string, functionName: string): Map<string, addonNameDurationObject> {
+        if(functionDurationMap.has(key)){ // update the entry
+            const addonNameDurationMap: addonNameDurationObject =  functionDurationMap.get(key)!;
             const lastDuration: number = addonNameDurationMap.Duration;
-            this.functionDurationMap.set(key, {Duration: value + lastDuration, AddonUUID: addonUUID, FunctionName: functionName});
-        } else{ //create a new map entry
-            this.functionDurationMap.set(key, {Duration: value, AddonUUID: addonUUID, FunctionName: functionName})
+            functionDurationMap.set(key, {Duration: value + lastDuration, AddonUUID: addonUUID, FunctionName: functionName});
+        } else{ // create a new map entry
+            functionDurationMap.set(key, {Duration: value, AddonUUID: addonUUID, FunctionName: functionName})
         }
+        return functionDurationMap;
+
     }
 
     // update addonNameMap with addonUUID as key and an empty string as addonName value
@@ -105,7 +107,7 @@ export class ComputingTime{
         
     }    
 
-    // get data from the last day, where auditType is sync_action and filter current distributorUUID.
+    // get the data from the last day, where auditType is sync_action and filter current distributorUUID.
     async getComputedTimeDataFromElastic(){
         let timestamp = new Date(new Date().setDate(new Date().getDate() - 1));
 
@@ -117,6 +119,7 @@ export class ComputingTime{
 
         const elasticEndpoint = `${indexName}/_search`;
 
+        // filter distributorUUID, time (last day), and auditType (sync_action)
         const requestBody = {
             "query": { 
                 "bool": { 
@@ -129,7 +132,7 @@ export class ComputingTime{
               },
             "size": 1000
         }
-        
+
         try{
             console.log(`About to search data in elastic, requested date: ${timestamp}, elastic requested URL: ${elasticEndpoint}`);
             const res = await callElasticSearchLambda(elasticEndpoint, 'POST', requestBody);
@@ -141,7 +144,8 @@ export class ComputingTime{
 
     }
 
-    createRelationData(relationResultObject: relationResultType[], name: string, value: number){
+    // update the data object that will be sent to the relation
+    upsertRelationData(relationResultObject: relationResultType[], name: string, value: number){
         const description: string = "Total computing time (minutes) in the last 7 days";
         let resource = {
             Data:  name,
