@@ -23,7 +23,11 @@ export type relationResultType = {
     Size: number
 };
 
-export class ComputingTime{
+// compute functions running time per day-
+// get last day data from elastic
+// according that, create the result object for the relation 
+// result object - FunctionName_addonUUID + the relevent function duration
+export class ComputeFunctionsDuration{
     papiClient: PapiClient;
     relationResultObject: relationResultType[] = []; // the data sent to the relation
     addonNameMap = new Map<string, string>(); // for mapping addon uuid to addon name

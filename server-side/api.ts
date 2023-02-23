@@ -7,7 +7,7 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
-import { ComputingTime, relationResultType } from './compute-functions-running-time.service'
+import { ComputeFunctionsDuration, relationResultType } from './computeFunctionsRunningTime.service'
 import { PapiClient } from '@pepperi-addons/papi-sdk';
 import PermissionManager from './permissionManager.service';
 
@@ -27,12 +27,11 @@ export async function get_functions_computing_time_from_elastic(client: Client, 
 export async function internal_get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<{ Title: string, Resources: relationResultType[] }>{
     const permissionService = new PermissionManager(client);
 
-    const computingTime = new ComputingTime(client);
+    const computingTime = new ComputeFunctionsDuration(client);
     await client.ValidatePermission(permissionService.policyName); // validate only admins can get computed functions time
 
     await computingTime.getComputingTime();
     const resource = computingTime.relationResultObject;
-    // const resource = await computingTime.insertComputedTimeDataFromElastic();
     let returnObject = {
         "Title": "Computing Time",
         "Resources": resource
