@@ -4,7 +4,7 @@ import { Client } from '@pepperi-addons/debug-server';
 class PermissionManager {
 
     papiClient: PapiClient;
-    policyName = "computingTime";
+    static readonly policyName = "computingTime";
     employeeType = "1";
 
     constructor(private client: Client) {
@@ -25,14 +25,14 @@ class PermissionManager {
         const url: string = `/policy_profiles`;
         const body = {
             PolicyAddonUUID: this.client.AddonUUID,
-            PolicyName: this.policyName,
+            PolicyName: PermissionManager.policyName,
             ProfileID: this.employeeType,
             Allowed: true
         }
         try{
-            console.log(`Going to upsert profile with policyName - ${this.policyName}`);
+            console.log(`Going to upsert profile with policyName - ${PermissionManager.policyName}`);
             const result = await this.papiClient.post(url, body);
-            console.log(`Succeeded upsert profile with policyName - ${this.policyName}`);
+            console.log(`Succeeded upsert profile with policyName - ${PermissionManager.policyName}`);
         } catch(err){
             throw new Error(`Could not upsert profile, error: ${err}`)
         }
@@ -42,13 +42,13 @@ class PermissionManager {
         const url: string = `/policies`;
         const body = {
             AddonUUID: this.client.AddonUUID,
-            Name: this.policyName,
+            Name: PermissionManager.policyName,
             Description: "Grants permissions only for admins"
         }
         try{
-            console.log(`Going to upsert policy with policyName - ${this.policyName}`);
+            console.log(`Going to upsert policy with policyName - ${PermissionManager.policyName}`);
             const result = await this.papiClient.post(url, body);
-            console.log(`Succeeded upsert policy with policyName - ${this.policyName}`);
+            console.log(`Succeeded upsert policy with policyName - ${PermissionManager.policyName}`);
         } catch(err){
             throw new Error(`Could not upsert policy, error: ${err}`)
         }
