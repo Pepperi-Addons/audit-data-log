@@ -1,6 +1,5 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { InnerElasticResult } from "./elastic-result-type";
 
 export class Addons{
     papiClient: PapiClient;
@@ -16,13 +15,17 @@ export class Addons{
         });
     }
 
-    // initiate empty map entry for each addonUUID, get all addons and for each addonUUID upsert its correspnding addonName
-    async getAddonNamesAndUpdateMap(UUIDList: string[]){
+    // get all addons, for each addonUUID upsert its correspnding addonName
+    async createUUIDNameMapping(UUIDList: string[]){
+        this.initiateAddonNameMap(UUIDList)
+        await this.getAddons(); // upsert to the map addonName for each addonUUID in the request
+    }
+
+    // initiate empty map entry for each addonUUID
+    initiateAddonNameMap(UUIDList: string[]){
         UUIDList.forEach(addonUUID => {
             this.addonNameMap.set(addonUUID, "");
         })
-
-        await this.getAddons(); // upsert to the map addonName for each addonUUID in the request
     }
 
     // call addons table with all UUIDs to get a map for addon uuid - addon name
