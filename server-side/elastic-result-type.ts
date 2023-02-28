@@ -10,7 +10,7 @@ export interface ElasticResultSecondType{
     resultObject?: undefined;
 }
 
-export interface InnerElasticResult {
+export type InnerElasticResult = {
         hits: {
             hits: [{
                 _source: {

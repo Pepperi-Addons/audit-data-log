@@ -41,9 +41,10 @@ export class RelationResultType {
 // result object - FunctionName_addonUUID + the relevent function duration
 export class ComputeFunctionsDuration{
     distributorUUID: string;
-    addonsList: Addons = new Addons(this.client);;
-
+    addonsList: Addons;
+    
     constructor(private client: Client) {
+        this.addonsList = new Addons(this.client);
         this.distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     }
     

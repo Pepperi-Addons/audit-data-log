@@ -16,7 +16,7 @@ export class Addons{
         });
     }
 
-    // initiate empty map for each addonUUID in elastic result object.
+    // initiate empty map entry for each addonUUID in elastic result object.
     // after that, upsert for each addonUUID its correspnding addonName
     async getAddonNamesAndUpdateMap(res: InnerElasticResult){
         res.aggregations.aggragateByAddonUUID.buckets.forEach(element => { //for each element returned from elastic-

@@ -11,7 +11,7 @@ The error Message is importent! it will be written in the audit log and help the
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { Relation, Subscription } from '@pepperi-addons/papi-sdk';
 import MyService from './my.service';
-import PermissionManager from './permissionManager.service';
+import PermissionManager from './permission-manager.service';
 
 const transactionActivitiesRelationName = "TransactionActivitiesRelation";
 const computingTimeRelationName = "ComputingTime";

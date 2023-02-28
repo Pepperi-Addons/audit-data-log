@@ -7,9 +7,9 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
-import { ComputeFunctionsDuration, RelationResultType } from './computeFunctionsRunningTime.service'
+import { ComputeFunctionsDuration, RelationResultType } from './compute-functions-running-time.service'
 import { PapiClient } from '@pepperi-addons/papi-sdk';
-import PermissionManager from './permissionManager.service';
+import PermissionManager from './permission-manager.service';
 
 // get functions computing time from elastic
 export async function get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<any> {
