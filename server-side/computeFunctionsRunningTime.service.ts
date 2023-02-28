@@ -1,7 +1,7 @@
 import { Client } from '@pepperi-addons/debug-server/dist';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import jwtDecode from "jwt-decode";
-import { AddonsMapping } from './addons-mapping';
+import { Addons } from './addons';
 import { ElasticResultFirstType, ElasticResultSecondType } from './elastic-result-type';
 
 const auditType= "sync_action";
@@ -41,10 +41,9 @@ export class RelationResultType {
 // result object - FunctionName_addonUUID + the relevent function duration
 export class ComputeFunctionsDuration{
     distributorUUID: string;
-    addonsList: AddonsMapping;
+    addonsList: Addons = new Addons(this.client);;
 
     constructor(private client: Client) {
-        this.addonsList = new AddonsMapping(client);
         this.distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     }
     
@@ -81,7 +80,7 @@ export class ComputeFunctionsDuration{
             let res: ElasticResultFirstType | ElasticResultSecondType= await this.getComputedTimeDataFromElastic(fromDate, toDate); 
             if(res.success){
                 // #2 - extract all addonUUIDs and update addonNameMap- insert all addon Names to the map as a value
-                await this.addonsList.updateAddonUUIDictionary(res.resultObject!); 
+                await this.addonsList.getAddonNamesAndUpdateMap(res.resultObject!); 
                 // #3 - modify the data to usage monitor relation data. Create relation result object which will be the data sent to the relation 
                 this.upsertUsageRelationData(res, relationResultObject) 
             }

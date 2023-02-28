@@ -2,7 +2,7 @@ import { Client } from "@pepperi-addons/debug-server/dist";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { InnerElasticResult } from "./elastic-result-type";
 
-export class AddonsMapping{
+export class Addons{
     papiClient: PapiClient;
     addonNameMap = new Map<string, string>(); // for mapping addon uuid to addon name
 
@@ -18,7 +18,7 @@ export class AddonsMapping{
 
     // initiate empty map for each addonUUID in elastic result object.
     // after that, upsert for each addonUUID its correspnding addonName
-    async updateAddonUUIDictionary(res: InnerElasticResult){
+    async getAddonNamesAndUpdateMap(res: InnerElasticResult){
         res.aggregations.aggragateByAddonUUID.buckets.forEach(element => { //for each element returned from elastic-
             this.updateAddonsMapping(element.key); // update addonNameMap according to the result- insert all addonUUIDs to the map as a key
         });
@@ -30,7 +30,7 @@ export class AddonsMapping{
     updateAddonsMapping(addonUUID: string){
         if(this.addonNameMap.has(addonUUID)){ // update the entry
             this.addonNameMap.set(addonUUID, "" + this.addonNameMap.get(addonUUID));
-        } else{ //create a new map entry
+        } else{
             this.addonNameMap.set(addonUUID, "")
         }
     }
