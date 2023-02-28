@@ -1,7 +1,8 @@
 import { Client } from '@pepperi-addons/debug-server/dist';
-import { PapiClient } from '@pepperi-addons/papi-sdk';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import jwtDecode from "jwt-decode";
+import { AddonsMapping } from './addons-mapping';
+import { ElasticResultFirstType, ElasticResultSecondType } from './elastic-result-type';
 
 const auditType= "sync_action";
 const indexName = 'audit_log';
@@ -39,19 +40,11 @@ export class RelationResultType {
 // according that, create the result object for the relation 
 // result object - FunctionName_addonUUID + the relevent function duration
 export class ComputeFunctionsDuration{
-    papiClient: PapiClient;
-    addonNameMap = new Map<string, string>(); // for mapping addon uuid to addon name
     distributorUUID: string;
+    addonsList: AddonsMapping;
 
     constructor(private client: Client) {
-        this.papiClient = new PapiClient({
-            baseURL: client.BaseURL,
-            token: client.OAuthAccessToken,
-            addonUUID: client.AddonUUID,
-            addonSecretKey: client.AddonSecretKey,
-            actionUUID: client.ActionUUID
-        });
-
+        this.addonsList = new AddonsMapping(client);
         this.distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     }
     
@@ -62,9 +55,9 @@ export class ComputeFunctionsDuration{
             "Resources": resource
         }
         return returnedObject;
-
     }
 
+    // initiate getComputingTime with the last day as a date.
     async getComputingTimeInTheLastDay(): Promise<Array<RelationResultType>>
     {
         const timestamp = new Date(new Date().setDate(new Date().getDate() - 1));
@@ -84,13 +77,13 @@ export class ComputeFunctionsDuration{
     {
         let relationResultObject: RelationResultType[] = []; // the data sent to the relation
         try{
-            // step 1 - get all relevant data from elastic
-            let res = await this.getComputedTimeDataFromElastic(fromDate, toDate); 
+            // #1 - get all relevant data from elastic
+            let res: ElasticResultFirstType | ElasticResultSecondType= await this.getComputedTimeDataFromElastic(fromDate, toDate); 
             if(res.success){
-                // step 2 - extract all addonUUIDs and update addonNameMap- insert all addon Names to the map as a value
-                await this.updateAddonUUIDictionary(res); 
-                // step 3 - modify the data to usage monitor relation data. Create relation result object which will be the data sent to the relation 
-                this.createUsageRelationData(res, relationResultObject) 
+                // #2 - extract all addonUUIDs and update addonNameMap- insert all addon Names to the map as a value
+                await this.addonsList.updateAddonUUIDictionary(res.resultObject!); 
+                // #3 - modify the data to usage monitor relation data. Create relation result object which will be the data sent to the relation 
+                this.upsertUsageRelationData(res, relationResultObject) 
             }
         } catch(err){
             throw new Error(`getComputingTime function, error: ${err}`);
@@ -98,76 +91,24 @@ export class ComputeFunctionsDuration{
         return relationResultObject;
     }
 
-    createUsageRelationData(res, relationResultObject: RelationResultType[]){
+    // for each addonUUID bucket- get the current addonUUID, transalte into addonName, and go over all function names belongs to the current addon.
+    // for each function, upsert the data for addonName_functionName to relationResultObject.
+    upsertUsageRelationData(res, relationResultObject: RelationResultType[]){
         res.resultObject.aggregations.aggragateByAddonUUID.buckets.forEach((element) => {                   
-            const addonUUID = this.addonNameMap.get(element.key)
+            const addonName = this.addonsList.addonNameMap.get(element.key)
             element.aggragateByFunctionName.buckets.forEach(addonElement => {
                 const functionName = addonElement.key;
                 const duration = addonElement.durationSum.value;
-                const name = `${functionName}_${addonUUID}`;
+                const name = `${addonName}_${functionName}`;
                 const relationData: RelationResultType  = new RelationResultType(name, duration);
                 relationResultObject.push(relationData);
             });
-            
         })
     }
 
-    async updateAddonUUIDictionary(res){
-        res.resultObject.aggregations.aggragateByAddonUUID.buckets.forEach(element => { //for each element returned from elastic-
-            const addonUUID = element.key;
-            this.updateAddonsMapping(addonUUID); // update addonNameMap- insert all addonUUIDs to the map as a key
-        });
-
-        await this.getAddons();
-    }
-
-
-    
-    // update duration map - if the data is for the same function- add its duration to the relevant key in the map (key is functionName_addonUUID)
-    updateDurationMap(functionDurationMap: Map<string, AddonNameDurationObject>, key: string, value: number, addonUUID: string, functionName: string): Map<string, AddonNameDurationObject> {
-        if(functionDurationMap.has(key)){ // update the entry
-            const addonNameDurationMap: AddonNameDurationObject =  functionDurationMap.get(key)!;
-            const lastDuration: number = addonNameDurationMap.Duration;
-            functionDurationMap.set(key, {Duration: value + lastDuration, AddonUUID: addonUUID, FunctionName: functionName});
-        } else{ // create a new map entry
-            functionDurationMap.set(key, {Duration: value, AddonUUID: addonUUID, FunctionName: functionName})
-        }
-        return functionDurationMap;
-
-    }
-
-    // update addonNameMap with addonUUID as key and an empty string as addonName value
-    updateAddonsMapping(addonUUID: string){
-        if(this.addonNameMap.has(addonUUID)){ // update the entry
-            this.addonNameMap.set(addonUUID, "" + this.addonNameMap.get(addonUUID));
-        } else{ //create a new map entry
-            this.addonNameMap.set(addonUUID, "")
-        }
-    }
-
-
-    // call addons table with all UUIDs to get a map for addon uuid - addon name
-    async getAddons() {
-        try{
-            await this.papiClient.addons.iter({
-                page_size: -1,
-                fields: ['UUID', 'Name']
-                }).toArray().then( (addons) => {
-                    addons.forEach(addon => {
-                        if(this.addonNameMap.has(addon['UUID']!)){ // create a new map entry
-                            this.addonNameMap.set(addon['UUID']!, addon['Name']!);
-                        }
-                    })
-                });
-        } catch(err){
-            console.log(`Could not get addons data, error: ${err}`);
-        }
-        
-    }    
-
     // get the data from the last day, where auditType is sync_action and filter current distributorUUID.
-    async getComputedTimeDataFromElastic(fromDate: Date, toDate: Date){
-        let res;
+    async getComputedTimeDataFromElastic(fromDate: Date, toDate: Date): Promise<ElasticResultFirstType | ElasticResultSecondType>{
+        let res: ElasticResultFirstType | ElasticResultSecondType;
         
         const elasticEndpoint = `${indexName}/_search`;
         // filter distributorUUID, time (last day), and auditType (sync_action)
