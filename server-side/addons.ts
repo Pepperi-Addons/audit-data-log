@@ -15,17 +15,13 @@ export class Addons{
         });
     }
 
-    // get all addons, for each addonUUID upsert its correspnding addonName
-    async createUUIDNameMapping(UUIDList: string[]){
-        this.initiateAddonNameMap(UUIDList)
-        await this.getAddons(); // upsert to the map addonName for each addonUUID in the request
-    }
-
-    // initiate empty map entry for each addonUUID
-    initiateAddonNameMap(UUIDList: string[]){
+    // initiate empty map entry for each addonUUID, get all addons and for each addonUUID upsert its correspnding addonName
+    async addAddonsToMap(UUIDList: string[]){
         UUIDList.forEach(addonUUID => {
             this.addonNameMap.set(addonUUID, "");
         })
+
+        await this.getAddons();
     }
 
     // call addons table with all UUIDs to get a map for addon uuid - addon name

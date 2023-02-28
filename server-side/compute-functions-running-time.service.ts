@@ -81,9 +81,7 @@ export class ComputeFunctionsDuration{
             let res: ElasticResultFirstType | ElasticResultSecondType= await this.getComputedTimeDataFromElastic(fromDate, toDate); 
             if(res.success){
                 // #2 - extract all addonUUIDs and update addonNameMap- insert all addon Names to the map as a value
-                const addonsUUIDList: string[] = this.getAddonsUUIDsAndNames(res.resultObject!); 
-                await this.addonsList.createUUIDNameMapping(addonsUUIDList); 
-
+                await this.getAddonsForMapping(res.resultObject!); 
                 // #3 - modify the data to usage monitor relation data. Create relation result object which will be the data sent to the relation 
                 this.upsertUsageRelationData(res, relationResultObject) 
             }
@@ -94,12 +92,13 @@ export class ComputeFunctionsDuration{
     }
 
     // get a list of addonUUIDs got from elastic result object, send those to getAddonNamesAndUpdateMap
-    getAddonsUUIDsAndNames(elasticResponse: InnerElasticResult): string[]{
+    async getAddonsForMapping(elasticResponse: InnerElasticResult){
         let addonsUUIDList: string[] = [];
         elasticResponse.aggregations.aggragateByAddonUUID.buckets.forEach(element => {
             addonsUUIDList.push(element.key);
         });
-        return addonsUUIDList;
+
+        await this.addonsList.addAddonsToMap(addonsUUIDList); 
     }
 
     // for each addonUUID bucket- get the current addonUUID, transalte into addonName, and go over all function names belongs to the current addon.
