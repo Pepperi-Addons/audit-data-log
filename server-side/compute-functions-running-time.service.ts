@@ -58,7 +58,7 @@ export class ComputeFunctionsDuration{
     }
 
     // initiate getComputingTime with the last day as a date.
-    async getComputingTimeInTheLastDay(): Promise<Array<RelationResultType>>
+    private async getComputingTimeInTheLastDay(): Promise<Array<RelationResultType>>
     {
         const timestamp = new Date(new Date().setDate(new Date().getDate() - 1));
         const date = [
@@ -73,7 +73,7 @@ export class ComputeFunctionsDuration{
         return await this.getComputingTime(fromDate, toDate);
     }
    
-    async getComputingTime(fromDate: Date, toDate: Date): Promise<Array<RelationResultType>>
+    private async getComputingTime(fromDate: Date, toDate: Date): Promise<Array<RelationResultType>>
     {
         let relationResultObject: RelationResultType[] = []; // the data sent to the relation
         try{
@@ -92,7 +92,7 @@ export class ComputeFunctionsDuration{
     }
 
     // get a list of addonUUIDs got from elastic result object, send those to getAddonNamesAndUpdateMap
-    async getAddonsForMapping(elasticResponse: InnerElasticResult){
+    private async getAddonsForMapping(elasticResponse: InnerElasticResult): Promise<void>{
         let addonsUUIDList: string[] = [];
         elasticResponse.aggregations.aggragateByAddonUUID.buckets.forEach(element => {
             addonsUUIDList.push(element.key);
@@ -103,7 +103,7 @@ export class ComputeFunctionsDuration{
 
     // for each addonUUID bucket- get the current addonUUID, transalte into addonName, and go over all function names belongs to the current addon.
     // for each function, upsert the data for addonName_functionName to relationResultObject.
-    upsertUsageRelationData(res, relationResultObject: RelationResultType[]){
+    private upsertUsageRelationData(res, relationResultObject: RelationResultType[]){
         res.resultObject.aggregations.aggragateByAddonUUID.buckets.forEach((element) => {                   
             const addonName = this.addonsList.addonNameMap.get(element.key)
             element.aggragateByFunctionName.buckets.forEach(addonElement => {
@@ -117,7 +117,7 @@ export class ComputeFunctionsDuration{
     }
 
     // get the data from the last day, where auditType is sync_action and filter current distributorUUID.
-    async getComputedTimeDataFromElastic(fromDate: Date, toDate: Date): Promise<ElasticResultFirstType | ElasticResultSecondType>{
+    private async getComputedTimeDataFromElastic(fromDate: Date, toDate: Date): Promise<ElasticResultFirstType | ElasticResultSecondType>{
         let res: ElasticResultFirstType | ElasticResultSecondType;
         
         const elasticEndpoint = `${indexName}/_search`;
@@ -165,16 +165,4 @@ export class ComputeFunctionsDuration{
         }
         return res;
     }
-
-    // update the data object that will be sent to the relation
-    upsertRelationData(relationResultObject: RelationResultType[], name: string, value: number){
-        const description: string = "Total computing time (minutes) in the last 7 days";
-        let resource = {
-            Data:  name,
-            Description: description,
-            Size: value
-        };
-        relationResultObject.push(resource);
-    }
-
 }

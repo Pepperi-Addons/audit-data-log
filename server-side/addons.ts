@@ -16,16 +16,16 @@ export class Addons{
     }
 
     // initiate empty map entry for each addonUUID, get all addons and for each addonUUID upsert its correspnding addonName
-    async addAddonsToMap(UUIDList: string[]){
+    async addAddonsToMap(UUIDList: string[]): Promise<void>{
         UUIDList.forEach(addonUUID => {
             this.addonNameMap.set(addonUUID, "");
         })
 
-        await this.getAddons();
+        await this.computeAddons();
     }
 
     // call addons table with all UUIDs to get a map for addon uuid - addon name
-    async getAddons() {
+    private async computeAddons(): Promise<void> {
         try{
             console.log("About to iterate over addons table to get list of addonUUIDs-addonNames.");
             await this.papiClient.addons.iter({
