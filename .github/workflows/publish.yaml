@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - master
-      - 'release/**'
+      - 'releases/**'
 
 jobs:
   publish-addon:
