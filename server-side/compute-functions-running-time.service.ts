@@ -35,6 +35,7 @@ export class RelationResultType {
     }
 };
 
+
 // compute functions running time per day-
 // get last day data from elastic
 // according that, create the result object for the relation 
