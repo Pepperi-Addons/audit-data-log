@@ -26,14 +26,15 @@ export type UsageResultObject = {
 export class RelationResultType {
     Data: string;
     Description: string;
-    Size: number;
+    Size: string;
 
-    constructor(Data: string, Size: number){
+    constructor(Data: string, Size: string){
         this.Data = Data;
-        this.Description = "Total computing time (minutes) in the last 7 days";
-        this.Size = Size;
+        this.Description = "Total computing time (minutes)";
+        this.Size = Size
     }
 };
+
 
 // compute functions running time per day-
 // get last day data from elastic
@@ -108,7 +109,7 @@ export class ComputeFunctionsDuration{
             const addonName = this.addonsList.addonNameMap.get(element.key)
             element.aggragateByFunctionName.buckets.forEach(addonElement => {
                 const functionName = addonElement.key;
-                const duration = addonElement.durationSum.value;
+                const duration = (addonElement.durationSum.value).toFixed(2);
                 const name = `${addonName}_${functionName}`;
                 const relationData: RelationResultType  = new RelationResultType(name, duration);
                 relationResultObject.push(relationData);
