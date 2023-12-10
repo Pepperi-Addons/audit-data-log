@@ -24,5 +24,8 @@
       "pns": "1.0.86",
       "pepperi_elastic_search": "0.0.67"
     }
+  },
+  "AddonPackage": {
+    "ClientZip": false,
   }
 }
