@@ -11,6 +11,32 @@ import { ComputeFunctionsDuration, RelationResultType } from './compute-function
 import { PapiClient } from '@pepperi-addons/papi-sdk';
 import PermissionManager from './permission-manager.service';
 
+import { InternalSyncService } from './elastic-sync-data/internal-sync.service';
+import { SyncJobsService } from './elastic-sync-data/sync-jobs.service';
+import { SyncDataAggregations } from './elastic-sync-data/sync-data-aggregations.service';
+import { UptimeSync } from './elastic-sync-data/uptime-sync';
+
+// for health monitor addon- get syncs data from elastic
+export async function get_sync_aggregations_from_elastic(client: Client, request: Request) {
+    const syncAggregationService = new SyncDataAggregations(client, request.header['X-Pepperi-OwnerID'], request.body.DataType);
+    return await syncAggregationService.getSyncsResult();
+}
+
+export async function get_uptime_sync_from_elastic(client: Client, request: Request) {
+    const uptimeSyncService = new UptimeSync(client, request.header['X-Pepperi-OwnerID'], request.body.CodeJobUUID, request.body.MonitorLevel);
+    return await uptimeSyncService.getSyncsResult();
+}
+
+export async function get_internal_syncs_from_elastic(client: Client, request: Request) {
+    const internalSyncDataService = new InternalSyncService(client, request.header['X-Pepperi-OwnerID'], request.body.CodeJobUUID);
+    return await internalSyncDataService.getSyncsResult();
+}
+
+export async function get_syncs_from_elastic(client: Client, request: Request) {
+    const syncJobsService = new SyncJobsService(client, request.header['X-Pepperi-OwnerID'], request.body);
+    return await syncJobsService.getSyncsResult();
+}
+
 // get functions computing time from elastic
 export async function get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<any> {
     let papiClient = new PapiClient({

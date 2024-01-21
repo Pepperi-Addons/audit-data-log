@@ -16,9 +16,9 @@
         "start": "tsc -w app.local.ts"
     },
     "devDependencies": {
-        "@rollup/plugin-commonjs": "^12.0.0",
+        "@rollup/plugin-commonjs": "^21.0.1",
         "@rollup/plugin-json": "^4.1.0",
-        "@rollup/plugin-node-resolve": "^8.0.0",
+        "@rollup/plugin-node-resolve": "^10.0.0",
         "@types/dotenv": "^8.2.0",
         "@types/node": "^10.17.24",
         "nodemon": "^2.0.4",
@@ -30,6 +30,7 @@
     "dependencies": {
         "@pepperi-addons/debug-server": "^0.0.38",
         "@pepperi-addons/papi-sdk": "^1.29.5",
+        "@pepperi-addons/pepperi-filters": "^1.0.36",
         "@pepperi-addons/system-addon-utils": "^1.0.4",
         "aws-sdk": "^2.899.0",
         "jwt-decode": "^3.1.2",
