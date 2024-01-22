@@ -21,28 +21,28 @@ const helper = new Helper()
 // health dashbaord tab
 export async function get_sync_aggregations_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
-    const syncAggregationService = new SyncDataAggregations(client, request.header['X-Pepperi-OwnerID'], request.body.DataType);
+    const syncAggregationService = new SyncDataAggregations(client, request.header['x-pepperi-ownerid'], request.body.DataType);
     return await syncAggregationService.getSyncsResult();
 }
 
 // health dashbaord tab- uptime cards
 export async function get_uptime_sync_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
-    const uptimeSyncService = new UptimeSync(client, request.header['X-Pepperi-OwnerID'], request.body.CodeJobUUID, request.body.MonitorLevel);
+    const uptimeSyncService = new UptimeSync(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID, request.body.MonitorLevel);
     return await uptimeSyncService.getSyncsResult();
 }
 
 // internal sync table (health monitor jobs)
 export async function get_internal_syncs_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
-    const internalSyncDataService = new InternalSyncService(client, request.header['X-Pepperi-OwnerID'], request.body.CodeJobUUID);
+    const internalSyncDataService = new InternalSyncService(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID);
     return await internalSyncDataService.getSyncsResult();
 }
 
 // sync jobs table
 export async function get_syncs_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
-    const syncJobsService = new SyncJobsService(client, request.header['X-Pepperi-OwnerID'], request.body);
+    const syncJobsService = new SyncJobsService(client, request.header['x-pepperi-ownerid'], request.body);
     return await syncJobsService.getSyncsResult();
 }
 
