@@ -30,7 +30,7 @@
     "dependencies": {
         "@pepperi-addons/debug-server": "^0.0.38",
         "@pepperi-addons/papi-sdk": "^1.29.5",
-        "@pepperi-addons/pepperi-filters": "^1.0.36",
+        "@pepperi-addons/pepperi-filters": "^1.0.37",
         "@pepperi-addons/system-addon-utils": "^1.0.4",
         "aws-sdk": "^2.899.0",
         "jwt-decode": "^3.1.2",
