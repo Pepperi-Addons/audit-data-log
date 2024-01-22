@@ -14,6 +14,7 @@ import { InternalSyncService } from './elastic-sync-data/internal-sync.service';
 import { SyncJobsService } from './elastic-sync-data/sync-jobs.service';
 import { SyncDataAggregations } from './elastic-sync-data/sync-data-aggregations.service';
 import { UptimeSync } from './elastic-sync-data/uptime-sync';
+import { SmartFilters } from './elastic-sync-data/smart-filters.service';
 
 const helper = new Helper()
 
@@ -46,6 +47,12 @@ export async function get_syncs_from_elastic(client: Client, request: Request) {
     return await syncJobsService.getSyncsResult();
 }
 
+// smart filters
+export async function get_smart_filters_from_elastic(client: Client, request: Request) {
+    request.header = helper.normalizeHeaders(request.header);
+    const syncJobsService = new SmartFilters(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID, request.body.Params, request.body.DataType);
+    return await syncJobsService.getSyncsResult();
+}
 
 // get functions computing time from elastic
 export async function get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<any> {
