@@ -35,7 +35,7 @@ export async function get_uptime_sync_from_elastic(client: Client, request: Requ
 // internal sync table (health monitor jobs)
 export async function get_internal_syncs_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
-    const internalSyncDataService = new InternalSyncService(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID);
+    const internalSyncDataService = new InternalSyncService(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID, request.body.Params);
     return await internalSyncDataService.getSyncsResult();
 }
 
