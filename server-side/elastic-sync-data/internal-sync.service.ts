@@ -26,7 +26,7 @@ export class InternalSyncService extends BaseElasticSyncService {
                     const status = JSON.parse(item._source.AuditInfo.ResultObject);
                     jobStatus = status.success ? 'Success' : 'Failed';
                 } catch(err) {
-                    console.log(`Could not parse sync result object, error: ${err}`);
+                    console.error(`Could not parse sync result object, error: ${err}`);
                 }
             }
             return {
