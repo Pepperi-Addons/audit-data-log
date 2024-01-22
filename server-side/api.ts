@@ -8,8 +8,44 @@ import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
 import { ComputeFunctionsDuration, RelationResultType } from './compute-functions-running-time.service'
-import { PapiClient } from '@pepperi-addons/papi-sdk';
+import { PapiClient, Helper } from '@pepperi-addons/papi-sdk';
 import PermissionManager from './permission-manager.service';
+import { InternalSyncService } from './elastic-sync-data/internal-sync.service';
+import { SyncJobsService } from './elastic-sync-data/sync-jobs.service';
+import { SyncDataAggregations } from './elastic-sync-data/sync-data-aggregations.service';
+import { UptimeSync } from './elastic-sync-data/uptime-sync';
+
+const helper = new Helper()
+
+// for health monitor addon- get syncs data from elastic
+// health dashbaord tab
+export async function get_sync_aggregations_from_elastic(client: Client, request: Request) {
+    request.header = helper.normalizeHeaders(request.header);
+    const syncAggregationService = new SyncDataAggregations(client, request.header['x-pepperi-ownerid'], request.body.DataType);
+    return await syncAggregationService.getSyncsResult();
+}
+
+// health dashbaord tab- uptime cards
+export async function get_uptime_sync_from_elastic(client: Client, request: Request) {
+    request.header = helper.normalizeHeaders(request.header);
+    const uptimeSyncService = new UptimeSync(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID, request.body.MonitorLevel);
+    return await uptimeSyncService.getSyncsResult();
+}
+
+// internal sync table (health monitor jobs)
+export async function get_internal_syncs_from_elastic(client: Client, request: Request) {
+    request.header = helper.normalizeHeaders(request.header);
+    const internalSyncDataService = new InternalSyncService(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID);
+    return await internalSyncDataService.getSyncsResult();
+}
+
+// sync jobs table
+export async function get_syncs_from_elastic(client: Client, request: Request) {
+    request.header = helper.normalizeHeaders(request.header);
+    const syncJobsService = new SyncJobsService(client, request.header['x-pepperi-ownerid'], request.body);
+    return await syncJobsService.getSyncsResult();
+}
+
 
 // get functions computing time from elastic
 export async function get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<any> {
