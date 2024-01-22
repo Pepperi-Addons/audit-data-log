@@ -21,7 +21,7 @@ export class SmartFilters extends BaseElasticSyncService {
         }
 
         if(this.dataType === 'SyncJob') {
-            uniqueValues['StatusNames'] = filteredSyncs.resultObject?.aggregations?.status_distinct_values.buckets.map(element =>{ return { Key: element.key, Value: element.key }} );
+            uniqueValues['UserNames'] = filteredSyncs.resultObject?.aggregations?.status_distinct_values.buckets.map(element =>{ return { Key: element.key, Value: element.key }} );
         }
     
         return uniqueValues;
