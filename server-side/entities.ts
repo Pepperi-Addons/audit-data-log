@@ -11,3 +11,5 @@ export const AUDIT_LOGS_WEEKS_RANGE = 5;
 export type AggregationDataType = 'HourlySyncs' | 'LastDaySyncs' | 'WeeklySyncs' | 'MonthlySyncs';
 
 export const HEALTH_MONITOR_ADDON_UUID = '7e15d4cc-55a7-4128-a9fe-0e877ba90069'
+
+export const RETRY_OFF_TIME_IN_MINUTES = 5;

@@ -1,5 +1,6 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
 import { BaseSyncAggregationService } from "./base-sync-aggregation.service";
+import { RETRY_OFF_TIME_IN_MINUTES } from "../entities";
 
 export class UptimeSync extends BaseSyncAggregationService {
     
@@ -19,7 +20,7 @@ export class UptimeSync extends BaseSyncAggregationService {
         const count = item.status_filter.buckets.failures.doc_count;
         // The value is the number of sync monitor jobs runs that failed, multiply by 5 divide by 1440(=minutesInADay)-maintenanceWindowMinutes (120 minutes).
         // (since each retry means 5 minutes without work.)
-        const calculatedFailedSyncs = ((count * 5) / (1440 - 120) * 100).toFixed(2);
+        const calculatedFailedSyncs = ((count * RETRY_OFF_TIME_IN_MINUTES) / (1440 - 120) * 100).toFixed(2);
         res[item.key_as_string] = `${calculatedFailedSyncs}%`; // update each month uptime sync value
       });
       return res;
