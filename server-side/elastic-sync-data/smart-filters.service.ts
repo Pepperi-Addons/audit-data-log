@@ -80,7 +80,7 @@ export class SmartFilters extends BaseElasticSyncService {
 
     private getKibanaDSL(kibanaQuery) {
         const kibanaDSL = {
-            size: 10,
+            size: 0,
             query: kibanaQuery,
             aggs: {
                 status_distinct_values: {
@@ -104,6 +104,4 @@ export class SmartFilters extends BaseElasticSyncService {
         }
         return kibanaDSL;
     }
-
-    
 }

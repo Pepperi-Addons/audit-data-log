@@ -84,7 +84,7 @@ export class UptimeSync extends BaseSyncAggregationService {
         const auditLogData = await this.getElasticData(this.getSyncAggregationQuery(aggregationQuery, monthlyDatesRange));
         const lastMonthDates = this.getLastMonthLogsDates()
   
-        return { UptimeSync: { data: this.fixElasticResultObject(auditLogData) , dates: lastMonthDates } };
+        return { data: this.fixElasticResultObject(auditLogData) , dates: lastMonthDates };
       }
     }
 
