@@ -29,11 +29,11 @@ export class SyncJobsService extends BaseElasticSyncService {
                     const resultObject = JSON.parse(item._source.AuditInfo.ResultObject);
                     return {
                         ...syncObjects,
-                        PepperiVersion: resultObject.ClientInfo.SoftwareVersion,
-                        Device: resultObject.ClientInfo.DeviceName + '(' + resultObject.ClientInfo.DeviceModel + ')',
-                        OSVersion: resultObject.ClientInfo.SystemVersion,
-                        DeviceID: resultObject.ClientInfo.DeviceExternalID,
-                        ClientType: resultObject.ClientInfo.SystemName
+                        PepperiVersion: resultObject?.ClientInfo?.SoftwareVersion || "",
+                        Device: (resultObject?.ClientInfo?.DeviceName + '(' + resultObject?.ClientInfo?.DeviceModel + ')') || "",
+                        OSVersion: resultObject?.ClientInfo?.SystemVersion || "",
+                        DeviceID: resultObject?.ClientInfo?.DeviceExternalID || "",
+                        ClientType: resultObject?.ClientInfo?.SystemName || ""
                     }
                 } catch(err) {
                     console.error(`Could not parse sync result object, error: ${err}`);
