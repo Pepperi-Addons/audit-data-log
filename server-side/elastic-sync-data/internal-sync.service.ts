@@ -32,8 +32,7 @@ export class InternalSyncService extends BaseElasticSyncService {
             return {
                 UUID: item._source.UUID,
                 Status: jobStatus,
-                StartDateTime: item._source.AuditInfo.JobMessageData.StartDateTime,
-                NumberOfTry: item._source.AuditInfo.JobMessageData.NumberOfTry
+                StartDateTime: item._source.AuditInfo.JobMessageData.StartDateTime
             };
         });
     }
