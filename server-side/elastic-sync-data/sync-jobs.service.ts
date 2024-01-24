@@ -15,7 +15,32 @@ export class SyncJobsService extends BaseElasticSyncService {
     }
 
     fixElasticResultObject(res) {
-        return res.resultObject.hits.hits?.map((item) => { return item._source });
+        return res.resultObject.hits.hits?.map((item) => {
+            let syncObjects = {
+                UUID: item._source['UUID'],
+                CreationDateTime: item._source['CreationDateTime'],
+                ModificationDateTime: item._source['ModificationDateTime'],
+                User: item._source.Event.User.Email,
+                Status: item._source.Status.Name,
+                NumberOfTry: item._source.AuditInfo.JobMessageData.NumberOfTry,
+            }
+            if (item._source.AuditInfo.ResultObject) {
+                try {
+                    const resultObject = JSON.parse(item._source.AuditInfo.ResultObject);
+                    return {
+                        ...syncObjects,
+                        PepperiVersion: resultObject.ClientInfo.SoftwareVersion,
+                        Device: resultObject.ClientInfo.DeviceName + '(' + resultObject.ClientInfo.DeviceModel + ')',
+                        OSVersion: resultObject.ClientInfo.SystemVersion,
+                        DeviceID: resultObject.ClientInfo.DeviceExternalID,
+                        ClientType: resultObject.ClientInfo.SystemName
+                    }
+                } catch(err) {
+                    console.error(`Could not parse sync result object, error: ${err}`);
+                }
+            }
+            return syncObjects;
+        });
     }
 
     private getSyncBody(maintenanceWindow: number[], distributorUUID: string) {
