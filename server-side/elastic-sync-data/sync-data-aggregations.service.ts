@@ -8,10 +8,10 @@ export class SyncDataAggregations extends BaseSyncAggregationService {
   dataType: AggregationDataType;
   offset: string;
 
-  constructor(client: Client, ownerID: string, dataType: AggregationDataType, offset: string) {
+  constructor(client: Client, ownerID: string, dataType: AggregationDataType, offset: number) {
     super(client, ownerID);
     this.dataType = dataType;
-    this.offset = offset;
+    this.offset = this.timeZoneOffsetToString(offset) || "+00:00";
   }
 
   fixElasticResultObject(res, aggregationFieldName = "aggregation_buckets") {
