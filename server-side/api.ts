@@ -22,7 +22,7 @@ const helper = new Helper()
 // health dashbaord tab
 export async function get_sync_aggregations_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
-    const syncAggregationService = new SyncDataAggregations(client, request.header['x-pepperi-ownerid'], request.body.DataType);
+    const syncAggregationService = new SyncDataAggregations(client, request.header['x-pepperi-ownerid'], request.body.DataType, request.body.Offset);
     return await syncAggregationService.getSyncsResult();
 }
 
