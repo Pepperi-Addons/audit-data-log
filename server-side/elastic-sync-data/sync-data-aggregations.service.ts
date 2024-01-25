@@ -6,10 +6,12 @@ export class SyncDataAggregations extends BaseSyncAggregationService {
 
   maintenanceWindow: number[] = [];
   dataType: AggregationDataType;
+  offset: string;
 
-  constructor(client: Client, ownerID: string, dataType: AggregationDataType) {
+  constructor(client: Client, ownerID: string, dataType: AggregationDataType, offset: string) {
     super(client, ownerID);
     this.dataType = dataType;
+    this.offset = offset;
   }
 
   fixElasticResultObject(res, aggregationFieldName = "aggregation_buckets") {
@@ -107,6 +109,7 @@ export class SyncDataAggregations extends BaseSyncAggregationService {
         "aggregation_buckets": {
           "date_histogram": {
             "field": "AuditInfo.JobMessageData.StartDateTime",
+            "time_zone": this.offset,
             ...histogramAdditionalParams
           },
           ...this.getStatusAggregationQuery()
@@ -123,7 +126,8 @@ export class SyncDataAggregations extends BaseSyncAggregationService {
       "range": {
         "AuditInfo.JobMessageData.StartDateTime": {
           "gte": "now-24h",
-          "lt": "now"
+          "lt": "now",
+          "time_zone": this.offset
         }
       }
     }
