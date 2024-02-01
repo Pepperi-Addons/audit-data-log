@@ -20,18 +20,9 @@ export class InternalSyncService extends BaseElasticSyncService {
 
     fixElasticResultObject(res) {
         return res.resultObject.hits.hits.map((item) => {
-            let jobStatus = 'Failed';
-            if(item._source.AuditInfo.ResultObject) {
-                try{
-                    const status = JSON.parse(item._source.AuditInfo.ResultObject);
-                    jobStatus = status.success ? 'Success' : 'Failed';
-                } catch(err) {
-                    console.error(`Could not parse sync result object, error: ${err}`);
-                }
-            }
             return {
                 UUID: item._source.UUID,
-                Status: jobStatus,
+                Status: item._source.Status.Name,
                 StartDateTime: item._source.AuditInfo.JobMessageData.StartDateTime
             };
         });
