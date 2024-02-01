@@ -94,7 +94,7 @@ export class UptimeSync extends BaseSyncAggregationService {
         "query": {
           "bool": {
             "must": [
-              this.createQueryTerm("AuditInfo.JobMessageData.AddonData.CodeJobUUID.keyword", this.codeJobUUID),
+              this.createQueryTerm("AuditInfo.JobMessageData.CodeJobUUID.keyword", this.codeJobUUID),
               this.getMaintenanceWindowHoursScript(this.maintenanceWindow),
               auditLogDateRange
             ]
