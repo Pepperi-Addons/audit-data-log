@@ -22,10 +22,14 @@ export abstract class BaseSyncAggregationService extends BaseElasticSyncService 
         
         const logsStartDate = new Date(today.setDate(today.getDate() - (AUDIT_LOGS_WEEKS_RANGE * 7))); // get AUDIT_LOGS_WEEKS_RANGE weeks ago date
         const firstLogsDay = logsStartDate.getMonth() === dateMonthAgo.getMonth() ? logsStartDate.getDate() : 1;
+        const lastLogsDay = dateMonthAgo.getDate();
+        const numberOfDays = (lastLogsDay - firstLogsDay) || 1;
 
-        return `${firstLogsDay}-${dateMonthAgo.getDate()}/${dateMonthAgo.getMonth() + 1}`; // return dates range in dd1-dd2/mm format
-      } 
-
+        return {
+          Range: `${firstLogsDay}-${lastLogsDay}/${dateMonthAgo.getMonth() + 1}`, // return dates range in dd1-dd2/mm format
+          NumberOfDays: numberOfDays
+        }; 
+      }
 
     timeZoneOffsetToString(timeZoneOffset: number): string | undefined {
         let timeZoneOffsetString: string | undefined = undefined;

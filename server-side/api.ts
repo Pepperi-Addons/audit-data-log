@@ -13,7 +13,7 @@ import PermissionManager from './permission-manager.service';
 import { InternalSyncService } from './elastic-sync-data/internal-sync.service';
 import { SyncJobsService } from './elastic-sync-data/sync-jobs.service';
 import { SyncDataAggregations } from './elastic-sync-data/sync-data-aggregations.service';
-import { UptimeSync } from './elastic-sync-data/uptime-sync';
+import { UptimeSyncService } from './elastic-sync-data/uptime-sync';
 import { SmartFilters } from './elastic-sync-data/smart-filters.service';
 
 const helper = new Helper()
@@ -29,7 +29,7 @@ export async function get_sync_aggregations_from_elastic(client: Client, request
 // health dashbaord tab- uptime cards
 export async function get_uptime_sync_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
-    const uptimeSyncService = new UptimeSync(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID, request.body.MonitorLevel);
+    const uptimeSyncService = new UptimeSyncService(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID, request.body.MonitorLevel);
     return await uptimeSyncService.getSyncsResult();
 }
 

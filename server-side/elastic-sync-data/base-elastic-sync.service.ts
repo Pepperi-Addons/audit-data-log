@@ -22,7 +22,7 @@ export abstract class BaseElasticSyncService {
 
     protected abstract getSyncsResult();
 
-    protected abstract fixElasticResultObject(res);
+    protected abstract fixElasticResultObject(res, period);
 
     validateAddon(ownerID: string){
         if(ownerID !== HEALTH_MONITOR_ADDON_UUID) {
@@ -30,9 +30,8 @@ export abstract class BaseElasticSyncService {
         }
     }
 
-    protected async getElasticData(requestBody) {
+    protected async getElasticData(requestBody) {   
         const elasticEndpoint = `${AUDIT_LOG_INDEX}/_search`;
-
         try{
             console.log(`About to search data in elastic`);
             const res = await callElasticSearchLambda(elasticEndpoint, 'POST', requestBody );
