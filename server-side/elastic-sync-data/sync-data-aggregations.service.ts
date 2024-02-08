@@ -141,7 +141,7 @@ export class SyncDataAggregations extends BaseSyncAggregationService {
   private getMonthlySyncs(auditLogData) {
     const lastMonthDates = this.getLastMonthLogsDates()
     const fixedResult = this.fixElasticResultObject(auditLogData);
-    fixedResult['dates'][0] = lastMonthDates;
+    fixedResult['dates'][0] = lastMonthDates.Range;
     return fixedResult;
   }
 

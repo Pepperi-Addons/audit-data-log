@@ -2,7 +2,11 @@ import { Client } from "@pepperi-addons/debug-server/dist";
 import { BaseSyncAggregationService } from "./base-sync-aggregation.service";
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, MAINTENANCE_WINDOW_IN_HOURS, RETRY_OFF_TIME_IN_MINUTES } from "../entities";
 
-export class UptimeSync extends BaseSyncAggregationService {
+const GAP_IN_SEQUENCE = 6;
+const MILLISECONDS_IN_MINUTE = 60000;
+
+export class UptimeSyncService extends BaseSyncAggregationService {
+
     
     private codeJobUUID: string = '';
     private monitorLevel: number = 0;
@@ -14,16 +18,23 @@ export class UptimeSync extends BaseSyncAggregationService {
         this.monitorLevel = monitorLevel;
     }
     
-    fixElasticResultObject(auditLogData) {
+    fixElasticResultObject(auditLogData, period) {
       let res = {};
-      auditLogData.resultObject.aggregations.aggregation_buckets.buckets.forEach((item) => {
-        const count = item.status_filter.buckets.failures.doc_count;
-        // The value is the number of sync monitor jobs runs that failed, multiply by 5 divide by 1440(=minutesInADay)-maintenanceWindowMinutes (120 minutes).
-        // (since each retry means 5 minutes without work.)
-        const calculatedFailedSyncs = ((1 - ((count * RETRY_OFF_TIME_IN_MINUTES) / (MINUTES_IN_HOUR * HOURS_IN_DAY - MINUTES_IN_HOUR * MAINTENANCE_WINDOW_IN_HOURS))) * 100).toFixed(2);
-        res[item.key_as_string] = `${calculatedFailedSyncs}%`; // update each month uptime sync value
-      });
+      const today = new Date();
+      const lastMonthKey = this.getObjectPropName(new Date(new Date().setMonth(today.getMonth()-1)));
+      const currentMonthKey = this.getObjectPropName(today);
+      const items = this.removeNotInSequence(auditLogData.resultObject.hits.hits)
+      const months = this.groupByMonth(items);
+      res[lastMonthKey] = this.calculateUpTime(months[lastMonthKey] || 0, period);
+      res[currentMonthKey] = this.calculateUpTime(months[currentMonthKey] || 0, today.getDate());
       return res;
+    }
+
+    // The value is the number of sync monitor jobs runs that failed, multiply by 5 divide by (1440(=minutesInADay) * period(number of days in the month)).
+    // (since each retry means 5 minutes without work.)
+    private calculateUpTime(failureCount: number, period: number) {
+        const calculatedFailedSyncs = ((1 - ((failureCount * RETRY_OFF_TIME_IN_MINUTES) / (MINUTES_IN_HOUR * HOURS_IN_DAY * period))) * 100).toFixed(2);
+        return `${calculatedFailedSyncs}%`; // update each month uptime sync value
     }
 
     async getSyncsResult() {
@@ -32,75 +43,86 @@ export class UptimeSync extends BaseSyncAggregationService {
     }
 
     getStatusAggregationQuery() {
-      return { 
-        "aggs": {
-            "aggregation_buckets": {
-                "date_histogram": {
-                    "field": "AuditInfo.JobMessageData.StartDateTime",
-                    "calendar_interval": "1M",
-                    "format": "MM/yyyy",
-                    "min_doc_count": 0,
-                    "extended_bounds": {
-                        "min": "now/M-1M/M",
-                        "max": "now/M"
-                    }
-                },
-                "aggs": {
-                  "status_filter": {
-                    "filters": {
-                      "filters": {
-                        "failures": {
-                          "bool": {
-                            "must": [
-                              {
-                                "term": {
-                                  "Status.Name.keyword": "Failure"
-                                }
-                              }
-                            ]
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-            }
-        }
-      }
+      return {}
     }
 
     async getUptimeSync() {
       if(this.monitorLevel) { // uptime sync cards are not available for monitor level 'Never' (0)
         const monthlyDatesRange = {
           "range": {
-            "AuditInfo.JobMessageData.StartDateTime": {
+            "CreationDateTime": {
               "gte": "now/M-1M/M", 
               "lt": "now"
             }
           }
         }
   
-        const aggregationQuery = this.getStatusAggregationQuery();
-        const auditLogData = await this.getElasticData(this.getSyncAggregationQuery(aggregationQuery, monthlyDatesRange));
+        const auditLogData = await this.getElasticData(this.getSyncAggregationQuery(monthlyDatesRange));
         const lastMonthDates = this.getLastMonthLogsDates()
   
-        return { data: this.fixElasticResultObject(auditLogData) , dates: lastMonthDates };
+        return { data: this.fixElasticResultObject(auditLogData, lastMonthDates.NumberOfDays) , dates: lastMonthDates.Range };
       }
     }
 
-    getSyncAggregationQuery(aggregationQuery, auditLogDateRange) {
+    getSyncAggregationQuery(auditLogDateRange) {
       return {
-        "size": 0,
-        "query": {
+        "size": 1000,
+        "sort": [
+          {
+            "CreationDateTime": {
+              "order": "asc"
+            }
+          }
+        ],
+        "query": { 
           "bool": {
             "must": [
               this.createQueryTerm("AuditInfo.JobMessageData.CodeJobUUID.keyword", this.codeJobUUID),
+              this.createQueryTerm("Status.Name.keyword", "Failure"),
               this.getMaintenanceWindowHoursScript(this.maintenanceWindow),
               auditLogDateRange
             ]
           }
-        },
-        ...aggregationQuery 
+        }
       }
+  }
+
+  private removeNotInSequence(items: any[]) {
+    return items.filter((item, index) => {
+      const previous = index > 0 ? items[index - 1] : undefined;
+      const next = index < items.length-1 ? items[index + 1] : undefined
+      const gapFromPrevious = previous ? this.calcGapBetweenItems(previous, item) : GAP_IN_SEQUENCE + 1; 
+      const gapFromNext = next ? this.calcGapBetweenItems(item, next) : GAP_IN_SEQUENCE + 1; 
+
+      return gapFromPrevious < GAP_IN_SEQUENCE || gapFromNext < GAP_IN_SEQUENCE
+    })
+  }
+
+  private calcGapBetweenItems(first, second) {
+    const firstCreation = new Date(first._source.CreationDateTime);
+    const secondCreation = new Date(second._source.CreationDateTime);
+
+    // calculate the time difference in minutes between the to dates.
+    return (secondCreation.getTime() - firstCreation.getTime()) / MILLISECONDS_IN_MINUTE
+  }
+
+  private groupByMonth(items: any[]) {
+    let result = {};
+    items.map(item => {
+      const creationDate = new Date(item._source.CreationDateTime)
+      const mapKey = this.getObjectPropName(creationDate);
+      // if the key doesn't exist, need to initialize the counter.
+      if(!(mapKey in result)) {
+        result[mapKey] = 1;
+      }
+      else {
+        result[mapKey]++
+      }
+    })
+    return result;
+  }
+
+  private getObjectPropName(date: Date) {
+    return `${date.getMonth() + 1}/${date.getFullYear()}` 
   }
 }
