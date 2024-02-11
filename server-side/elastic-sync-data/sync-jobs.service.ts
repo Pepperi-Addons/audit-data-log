@@ -11,7 +11,7 @@ export class SyncJobsService extends BaseElasticSyncService {
         const res = await this.getElasticData(this.getSyncBody(maintenanceWindow, distributorUUID));
         return { data: this.fixElasticResultObject(res), 
             searchAfter: res.resultObject.hits.hits?.[res.resultObject.hits.hits.length - 1]?.sort?.[0], // update search_after according to the last doucumnet in the list
-            size: Math.max(res.resultObject.hits.total.value, MAXIMUM_NEMBER_OF_ITEMS) }; // update total number of documents
+            size: Math.min(res.resultObject.hits.total.value, MAXIMUM_NEMBER_OF_ITEMS) }; // update total number of documents
     }
 
     fixElasticResultObject(res) {
