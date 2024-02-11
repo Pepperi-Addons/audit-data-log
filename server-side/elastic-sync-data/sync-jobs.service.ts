@@ -1,4 +1,4 @@
-import { SYNCS_PAGE_SIZE, SYNC_FUNCTION_NAME, SYNC_UUID } from "../entities";
+import { MAXIMUM_NEMBER_OF_ITEMS, SYNCS_PAGE_SIZE, SYNC_FUNCTION_NAME, SYNC_UUID } from "../entities";
 import { BaseElasticSyncService } from "./base-elastic-sync.service";
 import jwtDecode from "jwt-decode";
 import { parse, toKibanaQueryJSON, concat } from '@pepperi-addons/pepperi-filters';
@@ -11,7 +11,7 @@ export class SyncJobsService extends BaseElasticSyncService {
         const res = await this.getElasticData(this.getSyncBody(maintenanceWindow, distributorUUID));
         return { data: this.fixElasticResultObject(res), 
             searchAfter: res.resultObject.hits.hits?.[res.resultObject.hits.hits.length - 1]?.sort?.[0], // update search_after according to the last doucumnet in the list
-            size: res.resultObject.hits.total.value }; // update total number of documents
+            size: Math.max(res.resultObject.hits.total.value, MAXIMUM_NEMBER_OF_ITEMS) }; // update total number of documents
     }
 
     fixElasticResultObject(res) {
