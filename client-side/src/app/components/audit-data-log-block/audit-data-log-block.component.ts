@@ -54,8 +54,10 @@ export class AuditDataLogBlockComponent implements OnInit {
   }
 
   async ngOnInit() {
-    this.reloadList();
-    
+    this.addonService.getUsers().then((users) => {
+      this.users = users;
+        this.reloadList();
+      });
   }
 
   private reloadList() {
