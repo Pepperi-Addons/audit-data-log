@@ -10,7 +10,7 @@ The error Message is importent! it will be written in the audit log and help the
 
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { Relation, Subscription } from '@pepperi-addons/papi-sdk';
-import MyService from './my.service';
+import DataRetrievalService from './data-retrieval.service';
 import PermissionManager from './permission-manager.service';
 
 const transactionActivitiesRelationName = "TransactionActivitiesRelation";
@@ -18,7 +18,7 @@ const computingTimeRelationName = "ComputingTime";
 
 
 export async function install(client: Client, request: Request): Promise<any> {
-    const service = new MyService(client);
+    const service = new DataRetrievalService(client);
     const permissionService = new PermissionManager(client);
 
     const papiClient = service.papiClient;
@@ -28,7 +28,7 @@ export async function install(client: Client, request: Request): Promise<any> {
     return { success: true, resultObject: {} }
 }
 
-async function insertSubscription(client: Client, service: MyService) {
+async function insertSubscription(client: Client, service: DataRetrievalService) {
     let subscriptionBody: Subscription = {
         AddonRelativeURL: '/api/write_data_log_to_elastic_search',
         AddonUUID: client.AddonUUID,
@@ -41,7 +41,7 @@ async function insertSubscription(client: Client, service: MyService) {
 }
 
 export async function uninstall(client: Client, request: Request): Promise<any> {
-    const service = new MyService(client);
+    const service = new DataRetrievalService(client);
     let subscriptionBody: Subscription = {
         AddonRelativeURL: '/api/write_data_log_to_elastic_search',
         AddonUUID: client.AddonUUID,
@@ -56,7 +56,7 @@ export async function uninstall(client: Client, request: Request): Promise<any> 
 }
 
 export async function upgrade(client: Client, request: Request): Promise<any> {
-    const service = new MyService(client);
+    const service = new DataRetrievalService(client);
     const permissionService = new PermissionManager(client);
     const papiClient = service.papiClient;
     await permissionService.upsertPermissions();
