@@ -1,4 +1,4 @@
-import MyService from './my.service';
+import MyService from './data-retrieval.service';
 import { CreatedObject } from './createdObject';
 import peach from 'parallel-each';
 import { ActivitiesCount } from './activitiesCount';

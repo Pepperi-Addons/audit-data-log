@@ -39,8 +39,8 @@ export class AuditDataLogBlockComponent implements OnInit {
   @Output() hostEvents: EventEmitter<any> = new EventEmitter();
 
   addon;
-  users = [];
-  addons = [];
+  users = {}
+  addons = {}
   docs: Document[] = [];
   viewType: PepListViewType = "table";
 
@@ -54,18 +54,13 @@ export class AuditDataLogBlockComponent implements OnInit {
   }
 
   async ngOnInit() {
-    this.addonService.getUsers().then((users) => {
-      this.users = users;
-        this.reloadList();
-      });
-  }
-
-  private reloadList() {
     const whereQuery = `AddonUUID.keyword=${this.AddonUUID} and ObjectKey.keyword=${this.ObjectKey} and Resource.keyword=${this.Resource}`
+
     this.addonService.audit_data_log_query(null, whereQuery, null).subscribe((docs) => {
-      this.docs = docs;
+      this.docs = docs.AuditLogs;
+      this.users = docs.Users;
       this.loadDataLogsList(docs);
-    });
+      });
   }
 
   capitalize(s: string) {
@@ -123,7 +118,7 @@ export class AuditDataLogBlockComponent implements OnInit {
       FieldType: FIELD_TYPE.RichTextHTML,
       Enabled: false
     };
-    const user = this.users.find(u => u.UUID === document.UserUUID);
+    const user = this.users[document.UserUUID];
     const email = user ? user.Email : 'Pepperi Admin';
     const href = 'settingsSectionName/' + this.addonService.addonUUID + '/logs';
     //target="_blank" rel="noopener noreferrer"

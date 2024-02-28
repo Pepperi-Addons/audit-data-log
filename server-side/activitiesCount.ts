@@ -1,4 +1,4 @@
-import MyService from './my.service';
+import MyService from './data-retrieval.service';
 import { Client } from '@pepperi-addons/debug-server'
 import { CreatedObject } from './createdObject';
 

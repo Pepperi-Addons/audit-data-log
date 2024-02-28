@@ -90,7 +90,7 @@ export class AuditDataLogBlock {
         return this.addonService.getAddonApiCall(
             this.addonUUID,
             'api',
-            'audit_data_logs',
+            'get_audit_log_data',
             { params: params },
             false
         );
@@ -112,7 +112,7 @@ export class AuditDataLogBlock {
         return this.addonService.getAddonApiCall(
             this.addonUUID,
             'api',
-            'filters',
+            'get_filters_data',
             { params: params },
             false
         );

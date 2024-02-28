@@ -5,7 +5,6 @@ import { TranslateService } from '@ngx-translate/core';
 import { DEFAULT_PAGE_SIZE, IPepListPagerChangeEvent, IPepListSortingChangeEvent, IPepListSortingOptionChangeEvent, PepListComponent, PepListPagerType, PepListViewType } from '@pepperi-addons/ngx-lib/list';
 import { AuditDataLogBlock } from '../audit-data-log-block/audit-data-log-block.service';
 import { Document, UpdatedField } from '../../../../../shared/models/document'
-import moment from 'moment';
 import { ActivatedRoute, Router } from '@angular/router';
 import { createSmartFilter, createSmartFilterField, PepSmartFilterOperatorType } from '@pepperi-addons/ngx-lib/smart-filters';
 import { Location } from '@angular/common';
@@ -13,10 +12,6 @@ import {
   IPepSmartFilterField,
   IPepSmartFilterData,
   IPepSmartFilterFieldOption,
-  PepSmartFilterOperators,
-  PepSmartFilterType,
-  PepSmartFilterBaseField
-
 } from '@pepperi-addons/ngx-lib/smart-filters';
 import { IPepSearchStateChangeEvent } from '@pepperi-addons/ngx-lib/search';
 import { pepIconArrowRightAlt } from '@pepperi-addons/ngx-lib/icon';
@@ -56,8 +51,8 @@ export class AuditDataLogComponent implements OnInit {
   selectedMenuItem: PepMenuItem;
   searchStringFields: string;
   viewType: PepListViewType = "table";
-  users = [];
-  addons = [];
+  users = {}
+  addons = {}
   numberOfResults = '';
   docs: Document[] = [];
 
@@ -76,32 +71,18 @@ export class AuditDataLogComponent implements OnInit {
   ngAfterViewInit(): void {
   }
 
-  private reloadList() {
-    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
-      this.docs = docs;
-      this.loadDataLogsList(docs);
-
-    });
-  }
-
   onPagerChange(event: IPepListPagerChangeEvent): void {
   }
 
   ngOnInit(): void {
-
-    this.addonService.getUsers().then((users) => {
-      this.users = users;
-      this.addonService.getAddons().then((addons) => {
-        this.addons = addons;
-        this.addons.push({
-          UUID: '00000000-0000-0000-0000-00000000c07e',
-          Name: 'Nucleus'
-        })
-        this.loadSmartFilters();
-        this.reloadList();
-        this.loadMenuItems();
-      });
-    });
+    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
+      this.docs = docs.AuditLogs;
+      this.users = docs.Users;
+      this.addons = docs.Addons; 
+      this.loadSmartFilters();
+      this.loadDataLogsList(docs.AuditLogs);
+      this.loadMenuItems();
+        });
   }
 
   private loadSmartFilters(): void {
@@ -113,10 +94,12 @@ export class AuditDataLogComponent implements OnInit {
     const distinctValues = 'Resource,ActionType,UserUUID,AddonUUID';
     this.addonService.audit_data_log_distinct_values(this.searchString, this.filtersStr, this.searchStringFields, distinctValues).subscribe(async (values) => {
 
-      const resourceValues = values.find(x => x.APIName === 'Resource');
-      const actionTypeValues = values.find(x => x.APIName === 'ActionType');
-      const userUalues = values.find(x => x.APIName === 'UserUUID');
-      const addonValues = values.find(x => x.APIName === 'AddonUUID');
+      const resourceValues = values.AuditLogs.find(x => x.APIName === 'Resource');
+      const actionTypeValues = values.AuditLogs.find(x => x.APIName === 'ActionType');
+      const userUalues = values.AuditLogs.find(x => x.APIName === 'UserUUID');
+      const addonValues = values.AuditLogs.find(x => x.APIName === 'AddonUUID');
+      this.users = values.Users;
+      this.addons = values.Addons;
 
       resourceValues.Values.forEach(resourceValue => {
         resourceOptuins.push({ value: resourceValue.key, count: resourceValue.doc_count });
@@ -126,18 +109,18 @@ export class AuditDataLogComponent implements OnInit {
       });
 
       addonValues.Values.forEach(addon => {
-        const addonObject = this.addons.find(a => a.UUID.toLowerCase() === addon.key.toLowerCase());
+        const addonObject = this.addons[addon.key.toLowerCase()];
         if (addonObject) {
-          addonOptions.push({ value: addonObject.Name, count: addon.doc_count });
+          addonOptions.push({ value: addonObject, count: addon.doc_count });
         }
       });
 
       for (let user of userUalues.Values) {
-        let userDetails = this.users.find(u => u.UUID === user.key);
-        let email = userDetails ? userDetails.Email : 'Pepperi Admin';
+        let userDetails = this.users[user.key];
+        let email = userDetails?.Email ? userDetails?.Email : 'Pepperi Admin';
         // var admin user doesnt arrive in users api
         if (!userDetails) {
-          this.users.push({ UUID: user.key, Email: email })
+          this.users[user.key].Email = email;
         }
         userOptions.push({ value: email, count: user.doc_count });
       };
@@ -273,7 +256,7 @@ export class AuditDataLogComponent implements OnInit {
       FieldType: FIELD_TYPE.RichTextHTML,
       Enabled: false
     };
-    const user = this.users.find(u => u.UUID === document.UserUUID);
+    const user = this.users[document.UserUUID];
     const email = user ? user.Email : 'Pepperi Admin';
     const href = 'settingsSectionName/' + this.addonService.addonUUID + '/logs';
     //target="_blank" rel="noopener noreferrer"
@@ -299,8 +282,8 @@ export class AuditDataLogComponent implements OnInit {
       case "Resource":
         dataRowField.FieldType = FIELD_TYPE.RichTextHTML;
         dataRowField.ColumnWidth = 6;
-        let addon = this.addons.find(x => x.UUID === document.AddonUUID);
-        const addonName = addon ? addon.Name : "N/A";
+        let addon = this.addons[document.AddonUUID];
+        const addonName = addon ? addon : "N/A";
         const typeStr = `<a href="${href}?addon_uuid=${document.AddonUUID}"><span class="color-link ng-star-inserted">${addonName}: </span></a><span>${document.Resource}</span>`
         dataRowField.FormattedValue = dataRowField.Value = this.addonService.isSupportAdminUser ? typeStr : `${addonName}: ${document.Resource}`;
         break;
@@ -370,17 +353,15 @@ export class AuditDataLogComponent implements OnInit {
           let valuesString = values.join(',');
           if (filter.fieldId === 'UserUUID') {
             let usersUUIDs = [];
-            values.forEach((value) => {
-              const user = this.users.find(u => u.Email === value);
-              usersUUIDs.push(user.UUID);
+            values.forEach((entry) => {
+              usersUUIDs.push(Object.entries(this.users).find(([key, value]) => value['Email'] == entry)[0])
             })
             valuesString = usersUUIDs.join(',');
           }
           if (filter.fieldId === 'AddonUUID') {
             let addonUUIDs = [];
             values.forEach((value) => {
-              const addon = this.addons.find(u => u.Name === value);
-              addonUUIDs.push(addon.UUID);
+              addonUUIDs.push(this.addons[value]);
             })
             valuesString = addonUUIDs.join(',');
           }
@@ -394,10 +375,12 @@ export class AuditDataLogComponent implements OnInit {
     }
     this.filtersStr = filters.join(' and ');
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
-      this.loadDataLogsList(docs);
+      this.docs = docs.AuditLogs;
+      this.users = docs.Users;
+      this.addons = docs.Addons; 
+      this.loadDataLogsList(docs.AuditLogs);
       this.loadSmartFilters();
-
-    });
+      });
   }
 
   onSearchStateChanged(searchStateChangeEvent: IPepSearchStateChangeEvent) {
@@ -409,9 +392,12 @@ export class AuditDataLogComponent implements OnInit {
   onSearchChanged(search: any) {
     this.searchString = search.value;
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
-      this.loadDataLogsList(docs);
+      this.docs = docs.AuditLogs;
+      this.users = docs.Users;
+      this.addons = docs.Addons; 
+      this.loadDataLogsList(docs.AuditLogs);
       this.loadSmartFilters();
-    }, err => {
+      }, err => {
 
     })
   }
