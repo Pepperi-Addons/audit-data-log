@@ -94,7 +94,7 @@ export async function get_functions_computing_time_from_elastic(client: Client, 
 }
 
 export async function internal_get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<{ Title: string, Resources: RelationResultType[] }>{
-    // await client.ValidatePermission(PermissionManager.computingTimePolicyName); // validate only admins can get computed functions time
+    await client.ValidatePermission(PermissionManager.computingTimePolicyName); // validate only admins can get computed functions time
 
     const computingTime = new ComputeFunctionsDuration(client);
     const resultObject = await computingTime.getComputedTimeForUsage()
@@ -222,6 +222,7 @@ export async function post_to_elastic_search(client: Client, request: Request) {
 
 
 export async function audit_data_logs(client: Client, request: Request) {
+    await client.ValidatePermission(PermissionManager.auditLogPolicyName); // validate only admins can see audit data log UI
 
     try {
 
