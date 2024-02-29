@@ -367,7 +367,7 @@ export async function filters(client: Client, request: Request) {
             }
             else {
                 newBody["aggs"][field.replace(".Value", "")] = {
-                    "terms": { "script": `params._source['${field}']`, "size": 200, "order": { "_term": "asc" } }
+                    "terms": { "field": `${field}.keyword`, "size": 200, "order": { "_term": "asc" } }
                 };
                 QueryUtil.convertWhereToQuery(newWhere, newBody);
                 listPromises.push(callElasticSearchLambda(endpoint, method, JSON.stringify(newBody)));
@@ -377,7 +377,7 @@ export async function filters(client: Client, request: Request) {
         if (unselectedFields.length > 0) {
             newBody = JSON.parse(JSON.stringify(body));;
             unselectedFields.forEach(field => {
-                newBody["aggs"][field.replace(".Value", "")] = { "terms": { "script": `params._source['${field}']`, "size": 100, "order": { "_term": "asc" } } };
+                newBody["aggs"][field.replace(".Value", "")] = { "terms": { "field": `${field}.keyword`, "size": 100, "order": { "_term": "asc" } } };
             });
             QueryUtil.convertWhereToQuery(where, newBody);
             listPromises.push(callElasticSearchLambda(endpoint, method, JSON.stringify(newBody)));
