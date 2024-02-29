@@ -4,8 +4,13 @@ import { Client } from '@pepperi-addons/debug-server';
 class PermissionManager {
 
     papiClient: PapiClient;
-    static readonly policyName = "computingTime";
-    employeeType = "1";
+    policiesUrl: string = `/policies`;
+    profilesUrl: string = `/policy_profiles`;
+
+    static readonly computingTimePolicyName = "computingTime";
+    static readonly auditLogPolicyName = "auditLog";
+
+    employeeType = "1"; // admins
 
     constructor(private client: Client) {
         this.papiClient = new PapiClient({
@@ -17,40 +22,41 @@ class PermissionManager {
     }
 
     async upsertPermissions(){
-        await this.upsertPolicy();
-        await this.upsertProfile();
+        await this.createPolicy(PermissionManager.computingTimePolicyName, "Computing functions running time- grants permissions only for admins");
+        await this.createProfile(PermissionManager.computingTimePolicyName);
+
+        await this.createPolicy(PermissionManager.auditLogPolicyName, "Permissions for audit data log UI");
+        await this.createProfile(PermissionManager.auditLogPolicyName);
     }
 
-    async upsertProfile(){
-        const url: string = `/policy_profiles`;
+    async createPolicy(policyName: string, policyDescription: string){
+        const body = {
+            AddonUUID: this.client.AddonUUID,
+            Name: policyName,
+            Description: policyDescription
+        }
+        try{
+            console.log(`Going to upsert policy with policyName - ${policyName}`);
+            const result = await this.papiClient.post(this.policiesUrl, body);
+            console.log(`Policy created successfully, policyName - ${policyName}`);
+        } catch(err){
+            throw new Error(`Could not upsert policy, error: ${err}`)
+        }
+    }
+
+    async createProfile(policyName: string){
         const body = {
             PolicyAddonUUID: this.client.AddonUUID,
-            PolicyName: PermissionManager.policyName,
+            PolicyName: policyName,
             ProfileID: this.employeeType,
             Allowed: true
         }
         try{
-            console.log(`Going to upsert profile with policyName - ${PermissionManager.policyName}`);
-            const result = await this.papiClient.post(url, body);
-            console.log(`Succeeded upsert profile with policyName - ${PermissionManager.policyName}`);
+            console.log(`Going to upsert profile with policyName - ${policyName}`);
+            const result = await this.papiClient.post(this.profilesUrl, body);
+            console.log(`Profile created successfully, policyName - ${policyName}`);
         } catch(err){
             throw new Error(`Could not upsert profile, error: ${err}`)
-        }
-    }
-
-    async upsertPolicy(){
-        const url: string = `/policies`;
-        const body = {
-            AddonUUID: this.client.AddonUUID,
-            Name: PermissionManager.policyName,
-            Description: "Grants permissions only for admins"
-        }
-        try{
-            console.log(`Going to upsert policy with policyName - ${PermissionManager.policyName}`);
-            const result = await this.papiClient.post(url, body);
-            console.log(`Succeeded upsert policy with policyName - ${PermissionManager.policyName}`);
-        } catch(err){
-            throw new Error(`Could not upsert policy, error: ${err}`)
         }
     }
 }
