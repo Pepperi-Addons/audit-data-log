@@ -222,7 +222,7 @@ export async function post_to_elastic_search(client: Client, request: Request) {
 
 
 export async function audit_data_logs(client: Client, request: Request) {
-    // await client.ValidatePermission(PermissionManager.auditLogPolicyName); // validate only admins can see audit data log UI
+    await client.ValidatePermission(PermissionManager.auditLogPolicyName); // validate only admins can see audit data log UI
 
     try {
 
