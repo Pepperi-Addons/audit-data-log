@@ -75,14 +75,27 @@ export class AuditDataLogComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
-      this.docs = docs.AuditLogs;
-      this.users = docs.Users;
-      this.addons = docs.Addons; 
-      this.loadSmartFilters();
-      this.loadDataLogsList(docs.AuditLogs);
-      this.loadMenuItems();
-        });
+    this.filters =[ 
+      {
+          fieldId: "ActionDateTime",
+          operator: {
+              id: "inTheLast",
+              name: "IN_THE_LAST",
+              short: "In the last",
+              componentType: [ "date" ]
+          },
+          value: {
+            first: "1",
+            second: null,
+          },
+          operatorUnit: {
+              id: "weeks",
+              name: "WEEKS",
+              componentType: [ "date" ]
+          }
+      }
+    ]
+    this.onFiltersChange(this.filters);
   }
 
   private loadSmartFilters(): void {
