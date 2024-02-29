@@ -25,7 +25,7 @@ class PermissionManager {
         await this.createPolicy(PermissionManager.computingTimePolicyName, "Computing functions running time- grants permissions only for admins");
         await this.createProfile(PermissionManager.computingTimePolicyName);
 
-        await this.createPolicy(PermissionManager.auditLogPolicyName, "Permissions for audit data log UI");
+        await this.createPolicy(PermissionManager.auditLogPolicyName, "Permissions for audit data log GET endpoint");
         await this.createProfile(PermissionManager.auditLogPolicyName);
     }
 
