@@ -1,4 +1,4 @@
-import MyService from './my.service';
+import DataRetrievalService from './data-retrieval.service';
 import { CreatedObject } from './createdObject';
 import peach from 'parallel-each';
 import { ActivitiesCount } from './activitiesCount';
@@ -59,7 +59,7 @@ export class CPAPIUsage{
     // 1. get all created objects from Audit Data Logs
     // after this phase the CreatedObject will have the following fields: ObjectKey, ActionUUID, UserUUID, and ActivityType (partial - missing packages)
     async initiateCPAPICreatedObjects(activityType: string) {   
-        const service = new MyService(this.m_papiClient);
+        const service = new DataRetrievalService(this.m_papiClient);
         const papiClient = service.papiClient;
 
         const startTime: Date = new Date(new Date().setDate((new Date()).getDate() -1));

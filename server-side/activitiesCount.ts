@@ -1,4 +1,4 @@
-import MyService from './my.service';
+import DataRetrievalService from './data-retrieval.service';
 import { Client } from '@pepperi-addons/debug-server'
 import { CreatedObject } from './createdObject';
 
@@ -6,7 +6,7 @@ export class ActivitiesCount {
     // 2.2 Get all ActionObject from AuditLog (only the specific fields needed) from all of the ActionUUIDList (do it with page by page of 100? each)
     // collect all ActionObjects in container called ActionObjectDictionary (key of ActionUUID of course)
     async getAuditLogData(client: Client, subActionUUIDList: string[], ActionObjectDictionary: Map<string, any>): Promise<void> {
-        const service = new MyService(client);
+        const service = new DataRetrievalService(client);
         const papiClient = service.papiClient;
         let auditLogs: any[] = [];
         try {
@@ -49,7 +49,7 @@ export class ActivitiesCount {
 
     // 3.2 Get all UserObject from papi using the users/search with body (better users since there are more contacts) collect only UserUUID and add them all to UserUUIDDictionary (no need for pagination)
     async getAllUsers(client: Client, createdObjects: CreatedObject[], userUUIDList: string[]) {
-        const service = new MyService(client);
+        const service = new DataRetrievalService(client);
         const papiClient = service.papiClient;
         let UserUUIDSet = new Set<string>();
         let UserObjects: any[] = [];
@@ -85,7 +85,7 @@ export class ActivitiesCount {
     // 4.2 Get all TransactionObject from papi using the transactions/search with body collect only UUID and add them all to ObjectKeyDictionary (no need for pagination)
     //Activity type can be transaction/activity/package
     async addActivityType(client: Client, createdObjects: CreatedObject[], ObjectKeyList: string[]) {
-        const service = new MyService(client);
+        const service = new DataRetrievalService(client);
         const papiClient = service.papiClient;
         let transactionUUIDs = new Set<string>();
         let TransactionObjects: any[] = [];

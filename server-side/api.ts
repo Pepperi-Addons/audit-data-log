@@ -1,4 +1,3 @@
-import MyService from './my.service'
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { Document, UpdatedField } from "../shared/models/document"
 import { Constants } from "../shared/constants"
@@ -15,8 +14,35 @@ import { SyncJobsService } from './elastic-sync-data/sync-jobs.service';
 import { SyncDataAggregations } from './elastic-sync-data/sync-data-aggregations.service';
 import { UptimeSyncService } from './elastic-sync-data/uptime-sync';
 import { SmartFilters } from './elastic-sync-data/smart-filters.service';
+import DataRetrievalService from './data-retrieval.service';
 
 const helper = new Helper()
+
+export async function get_audit_log_data(client: Client, request: Request) {
+    const dataRetrievalService = new DataRetrievalService(client);
+
+    const auditLogs = await audit_data_logs(client, request);
+    const users = await dataRetrievalService.get_users(auditLogs, "UserUUID");
+    const addons = await dataRetrievalService.get_addons(auditLogs, "AddonUUID");
+    return {
+        AuditLogs: auditLogs,
+        Users: users,
+        Addons: addons
+    }
+}
+
+export async function get_filters_data(client: Client, request: Request) {
+    const dataRetrievalService = new DataRetrievalService(client);
+
+    const auditLogs = await filters(client, request);
+    const users = await dataRetrievalService.get_users((auditLogs.find(x => x.APIName === 'UserUUID')).Values, "key");
+    const addons = await dataRetrievalService.get_addons((auditLogs.find(x => x.APIName === 'AddonUUID')).Values, "key");
+    return {
+        AuditLogs: auditLogs,
+        Users: users,
+        Addons: addons
+    }
+}
 
 // for health monitor addon- get syncs data from elastic
 // health dashbaord tab
@@ -68,7 +94,7 @@ export async function get_functions_computing_time_from_elastic(client: Client, 
 }
 
 export async function internal_get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<{ Title: string, Resources: RelationResultType[] }>{
-    await client.ValidatePermission(PermissionManager.policyName); // validate only admins can get computed functions time
+    // await client.ValidatePermission(PermissionManager.computingTimePolicyName); // validate only admins can get computed functions time
 
     const computingTime = new ComputeFunctionsDuration(client);
     const resultObject = await computingTime.getComputedTimeForUsage()
@@ -107,7 +133,7 @@ export async function write_data_log_to_elastic_search(client: Client, request: 
     let body = request.body;
     console.log(`start write data log to elastic search ActionUUID:${body.Message.ActionUUID}`);
     const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
-    const service = new MyService(client);
+    const service = new DataRetrievalService(client);
 
     const dateString = new Date().toISOString();
     let bulkBody = new Array();
