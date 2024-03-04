@@ -1,8 +1,10 @@
 import DataRetrievalService from './data-retrieval.service';
 import { Client } from '@pepperi-addons/debug-server'
 import { CreatedObject } from './createdObject';
+import { RESOURCE_CHUNK_SIZE } from './entities';
 
 export class ActivitiesCount {
+
     // 2.2 Get all ActionObject from AuditLog (only the specific fields needed) from all of the ActionUUIDList (do it with page by page of 100? each)
     // collect all ActionObjects in container called ActionObjectDictionary (key of ActionUUID of course)
     async getAuditLogData(client: Client, subActionUUIDList: string[], ActionObjectDictionary: Map<string, any>): Promise<void> {
@@ -55,20 +57,14 @@ export class ActivitiesCount {
         let UserObjects: any[] = [];
         let newCreatedObject: CreatedObject[] = [];
 
-        let body = {
-            "UUIDList": userUUIDList,
-            "fields": "UUID,Profile"
-        }
-        let usersUrl = "/users/search";
-        try {
-            UserObjects = await papiClient.post(`${usersUrl}`, body);
-            UserObjects.forEach(UserObject => {
-                UserUUIDSet.add(UserObject['UUID']);
-            });
-        }
-        catch (ex) {
-            console.log("Error:" + `${ex}`);
-        }
+        for (let i = 0; i < userUUIDList.length; i += RESOURCE_CHUNK_SIZE) {
+            let body = {
+                "UUIDList": userUUIDList.slice(i, i + RESOURCE_CHUNK_SIZE),
+                "fields": "UUID,Profile"
+            }
+
+            await this.getResourceData(papiClient, 'users', UserUUIDSet, UserObjects, body);           
+        }      
 
         newCreatedObject = this.addUserType(createdObjects, UserUUIDSet);
         return newCreatedObject;
@@ -91,20 +87,15 @@ export class ActivitiesCount {
         let TransactionObjects: any[] = [];
         let newCreatedObject: CreatedObject[] = [];
 
-        let body = {
-            "UUIDList": ObjectKeyList,
-            "fields": "UUID",
-            "include_deleted": true
-        }
-        let transactionsUrl = "/transactions/search";
-        try {
-            TransactionObjects = await papiClient.post(`${transactionsUrl}`, body);
-            TransactionObjects.forEach(TransactionObject => {
-                transactionUUIDs.add(TransactionObject['UUID']);
-            });
-        }
-        catch (ex) {
-            console.log("Error:" + `${ex}`);
+        
+        for (let i = 0; i < ObjectKeyList.length; i += RESOURCE_CHUNK_SIZE) {
+            let body = {
+                "UUIDList": ObjectKeyList.slice(i, i + RESOURCE_CHUNK_SIZE),
+                "fields": "UUID",
+                "include_deleted": true
+            }
+
+            await this.getResourceData(papiClient, 'transactions', transactionUUIDs, TransactionObjects, body);           
         }
 
         newCreatedObject = this.addType(createdObjects, transactionUUIDs);
@@ -121,5 +112,20 @@ export class ActivitiesCount {
             }
             return createdObject;
         })
+    }
+
+
+    async getResourceData(papiClient, resourceUrl: string, UUIDSet: Set<string>, resourceObjects: string[], body) {
+        try {
+            console.log(`Looking for ${resourceUrl} names.`);
+            resourceObjects = await papiClient.post(`/${resourceUrl}/search`, body);
+            console.log(`Successfully Got ${resourceUrl} names.`);
+            resourceObjects.forEach(UserObject => {
+                UUIDSet.add(UserObject['UUID']);
+            });
+        }
+        catch (ex) {
+            console.error("Error:" + `${ex}`);
+        }
     }
 }

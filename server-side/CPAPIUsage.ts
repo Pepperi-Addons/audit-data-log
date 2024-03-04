@@ -2,19 +2,25 @@ import DataRetrievalService from './data-retrieval.service';
 import { CreatedObject } from './createdObject';
 import peach from 'parallel-each';
 import { ActivitiesCount } from './activitiesCount';
+import { Constants } from '../shared/constants';
+import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
+import jwtDecode from "jwt-decode";
 
 const activitiesCount = new ActivitiesCount();
+const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
 
 export class CPAPIUsage{
     m_papiClient;
     m_cpapiCreatedObjects: CreatedObject[];
     createdObjectMap: Map<string, number>;
+    distributorUUID: string;
 
     constructor(client){
         this.m_papiClient = client;
         this.m_cpapiCreatedObjects = [];
         this.createdObjectMap = new Map([]);
-        this.buildTypeMap();        
+        this.buildTypeMap();
+        this.distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
     }
 
     //Creats the data sets of all UserType-ActivyType-Device combinations
@@ -59,27 +65,97 @@ export class CPAPIUsage{
     // 1. get all created objects from Audit Data Logs
     // after this phase the CreatedObject will have the following fields: ObjectKey, ActionUUID, UserUUID, and ActivityType (partial - missing packages)
     async initiateCPAPICreatedObjects(activityType: string) {   
-        const service = new DataRetrievalService(this.m_papiClient);
-        const papiClient = service.papiClient;
+        let partialDataLogResult: any[] = [];
+        let dataLogResult: any[] = [];
+        let searchAfter: number[] = [];
 
-        const startTime: Date = new Date(new Date().setDate((new Date()).getDate() -1));
-        const endTime: Date = new Date(new Date().setDate((new Date()).getDate() -1));
+        do {
+            partialDataLogResult = await this.callElasticSearch(activityType, searchAfter);
+            searchAfter = partialDataLogResult[partialDataLogResult.length - 1]?.sort;
+            dataLogResult.push(...partialDataLogResult.map(hit => hit._source));
+        } while (partialDataLogResult.length > 0);
 
-        startTime.setUTCHours(0,0,0);
-        endTime.setUTCHours(23,59,59);
-
-        let dateCheck: string = "CreationDateTime>=" + startTime.toISOString() + " and CreationDateTime<=" + endTime.toISOString();
-        let params: string = `where=AddonUUID.keyword=00000000-0000-0000-0000-00000000c07e and ActionType=insert and Resource=${activityType} and ${dateCheck}&fields=ActionUUID,ObjectKey,UserUUID,Resource`;
-        
-        const dataLogUUID: string = this.m_papiClient.AddonUUID;
-        const dataLogUrl: string = `${dataLogUUID}/${'api'}/${'audit_data_logs'+'?'+ params}`;
-        const dataLogResult = await papiClient.get(`/addons/api/${dataLogUrl}`);
-        
         const createdObjects: CreatedObject[] = dataLogResult.map((element:CreatedObject) => {
             return new CreatedObject(element.ActionUUID, element.ObjectKey, element.UserUUID, activityType)
         });
 
         this.m_cpapiCreatedObjects.push(...createdObjects);
+    }
+
+    async callElasticSearch(activityType: string, searchAfter: number[]) {
+        try{
+            console.log(`About to search data in elastic`);
+            const res = await callElasticSearchLambda(endpoint, 'POST', this.createDSLQuery(activityType, searchAfter) );
+            console.log(`Successfully got data from elastic.`);
+            return res.resultObject.hits.hits;
+        } catch(err){
+            throw new Error(`Could not search data in elastic, error: ${err}`);
+        }
+    }
+
+    createDSLQuery(activityType: string, searchAfter: number[]) {
+        const dslQuery = {
+            "size": 10000,
+            "_source": ["ActionUUID", "ObjectKey", "UserUUID", "Resource"],
+            "query": {
+                "bool": {
+                    "must": [
+                      {
+                          "range": {
+                            "CreationDateTime": {
+                              "gte": "now-1d/d",
+                              "lt": "now/d"
+                            }
+                          }
+                      },
+                      {
+                            "terms": {
+                                "AddonUUID.keyword": [
+                                    "00000000-0000-0000-0000-00000000c07e"
+                                ]
+                            }
+                        },
+                        {
+                            "terms": {
+                                "ActionType": [
+                                    "insert"
+                                ]
+                            }
+                        },
+                        {
+                            "terms": {
+                                "Resource": [
+                                    activityType
+                                ]
+                            }
+                        },
+                        {
+                            "terms": {
+                                "DistributorUUID": [
+                                    this.distributorUUID
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "sort": [
+                {
+                  "CreationDateTime": {
+                    "order": "desc"
+                  }
+                },
+                {
+                    "ObjectKey.keyword": {
+                    "order": "desc"
+                    }
+                }
+              ]
+        }
+        if(searchAfter.length > 0){
+            dslQuery['search_after'] = searchAfter;
+        }
+        return dslQuery;
     }
 
     // 2. compute DeviceType from ActionUUD based on cpapi AddonUUID (ABCDEF)
