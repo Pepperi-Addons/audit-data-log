@@ -1,6 +1,7 @@
 import DataRetrievalService from './data-retrieval.service';
 import { Client } from '@pepperi-addons/debug-server'
 import { CreatedObject } from './createdObject';
+import { RESOURCE_CHUNK_SIZE } from './entities';
 
 export class ActivitiesCount {
 
@@ -56,9 +57,9 @@ export class ActivitiesCount {
         let UserObjects: any[] = [];
         let newCreatedObject: CreatedObject[] = [];
 
-        for (let i = 0; i < userUUIDList.length; i += 500) {
+        for (let i = 0; i < userUUIDList.length; i += RESOURCE_CHUNK_SIZE) {
             let body = {
-                "UUIDList": userUUIDList.slice(i, i + 500),
+                "UUIDList": userUUIDList.slice(i, i + RESOURCE_CHUNK_SIZE),
                 "fields": "UUID,Profile"
             }
 
@@ -87,9 +88,9 @@ export class ActivitiesCount {
         let newCreatedObject: CreatedObject[] = [];
 
         
-        for (let i = 0; i < ObjectKeyList.length; i += 500) {
+        for (let i = 0; i < ObjectKeyList.length; i += RESOURCE_CHUNK_SIZE) {
             let body = {
-                "UUIDList": ObjectKeyList.slice(i, i + 500),
+                "UUIDList": ObjectKeyList.slice(i, i + RESOURCE_CHUNK_SIZE),
                 "fields": "UUID",
                 "include_deleted": true
             }
