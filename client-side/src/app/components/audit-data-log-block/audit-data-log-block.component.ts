@@ -59,7 +59,7 @@ export class AuditDataLogBlockComponent implements OnInit {
     this.addonService.audit_data_log_query(null, whereQuery, null).subscribe((docs) => {
       this.docs = docs.AuditLogs;
       this.users = docs.Users;
-      this.loadDataLogsList(docs);
+      this.loadDataLogsList(this.docs);
       });
   }
 
