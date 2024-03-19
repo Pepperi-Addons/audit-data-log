@@ -6,6 +6,7 @@ import jwtDecode from "jwt-decode";
 import { Client } from '@pepperi-addons/debug-server/dist';
 
 const activitiesCount = new ActivitiesCount();
+const MAX_ITEMS_TO_SEARCH = 10000;
 
 export class CPAPIUsage{
     dataRetrievalService = new DataRetrievalService(this.client);
@@ -72,7 +73,7 @@ export class CPAPIUsage{
             partialDataLogResult = await this.callElasticSearch(activityType, searchAfter);
             searchAfter = partialDataLogResult[partialDataLogResult.length - 1]?.sort;
             dataLogResult.push(...partialDataLogResult.map(hit => hit._source));
-        } while (partialDataLogResult.length > 0);
+        } while (partialDataLogResult.length === MAX_ITEMS_TO_SEARCH);
 
         const createdObjects: CreatedObject[] = dataLogResult.map((element:CreatedObject) => {
             return new CreatedObject(element.ActionUUID, element.ObjectKey, element.UserUUID, activityType)
@@ -97,7 +98,7 @@ export class CPAPIUsage{
 
     createDSLQuery(activityType: string, searchAfter: number[]) {
         const dslQuery = {
-            "size": 10000,
+            "size": MAX_ITEMS_TO_SEARCH,
             "_source": ["ActionUUID", "ObjectKey", "UserUUID", "Resource"],
             "query": {
                 "bool": {
