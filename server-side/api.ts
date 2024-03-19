@@ -17,9 +17,9 @@ import { SmartFilters } from './elastic-sync-data/smart-filters.service';
 import DataRetrievalService from './data-retrieval.service';
 
 const helper = new Helper()
-const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
+    const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
     try{
         console.log(`About to search data in elastic, calling callElasticSearchLambda`);
         const res = await callElasticSearchLambda(endpoint, 'POST', request.body);
