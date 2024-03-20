@@ -1,13 +1,13 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
 import { BaseSyncAggregationService } from "./base-sync-aggregation.service";
-import { HOURS_IN_DAY, MINUTES_IN_HOUR, MAINTENANCE_WINDOW_IN_HOURS, RETRY_OFF_TIME_IN_MINUTES } from "../entities";
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, MAINTENANCE_WINDOW_IN_HOURS, RETRY_OFF_TIME_IN_MINUTES, KMS_KEY, DAY_TO_NUMBER } from "../entities";
 
 const GAP_IN_SEQUENCE = 6;
 const MILLISECONDS_IN_MINUTE = 60000;
 
 export class UptimeSyncService extends BaseSyncAggregationService {
 
-    
+
     private codeJobUUID: string = '';
     private monitorLevel: number = 0;
     maintenanceWindow: number[] = [];
@@ -56,15 +56,17 @@ export class UptimeSyncService extends BaseSyncAggregationService {
             }
           }
         }
+
+        const globalMaintenanceWindow = await this.getGlobalMaintenanceWindow();
   
-        const auditLogData = await this.getElasticData(this.getSyncAggregationQuery(monthlyDatesRange));
+        const auditLogData = await this.getElasticData(this.getSyncAggregationQuery(monthlyDatesRange, globalMaintenanceWindow));
         const lastMonthDates = this.getLastMonthLogsDates()
   
         return { data: this.fixElasticResultObject(auditLogData, lastMonthDates.NumberOfDays) , dates: lastMonthDates.Range };
       }
     }
 
-    getSyncAggregationQuery(auditLogDateRange) {
+    getSyncAggregationQuery(auditLogDateRange, globalMaintenanceWindow: { days: string[], time: string, duration: number }) {
       return {
         "size": 1000,
         "sort": [
@@ -80,6 +82,7 @@ export class UptimeSyncService extends BaseSyncAggregationService {
               this.createQueryTerm("AuditInfo.JobMessageData.CodeJobUUID.keyword", this.codeJobUUID),
               this.createQueryTerm("Status.Name.keyword", "Failure"),
               this.getMaintenanceWindowHoursScript(this.maintenanceWindow),
+              this.getGlobalMaintenanceWindowScript(globalMaintenanceWindow),
               auditLogDateRange
             ]
           }
@@ -124,5 +127,54 @@ export class UptimeSyncService extends BaseSyncAggregationService {
 
   private getObjectPropName(date: Date) {
     return `${date.getMonth() + 1}/${date.getFullYear()}` 
+  }
+
+  // exclude syncs that were created in the global maintenance window
+  private getGlobalMaintenanceWindowScript(globalMaintenanceWindow: { days: string[], time: string, duration: number }) {
+    let scriptReturnedString = '';
+
+    const startHour = parseInt(globalMaintenanceWindow.time.split(':')[0]);
+    const endHour = (startHour + globalMaintenanceWindow.duration) % 24;
+    const minutes = parseInt(globalMaintenanceWindow.time.split(':')[1]);
+    
+    if(startHour > endHour) { // means we are at the next day
+      scriptReturnedString = `(${globalMaintenanceWindow.days.map(day => { return `(targetDay==${DAY_TO_NUMBER[day]} && targetTime>=startTime) || (targetDay==${(DAY_TO_NUMBER[day] + 1) % 7} && targetTime<=endTime)`}).join(' || ')})`;
+    } else {
+      scriptReturnedString = `(${globalMaintenanceWindow.days.map(day => { return `targetDay==${DAY_TO_NUMBER[day]}`}).join(' || ')}) && targetTime>=startTime && targetTime<=endTime`;
+    }
+
+    return {
+      bool: {
+          must_not: {
+              script: {
+                  script: { // excluding global maintenance window hours
+                      source: `
+                          def targetDay = doc['CreationDateTime'].value.dayOfWeek;
+                          def targetHour = doc['CreationDateTime'].value.hourOfDay;
+                          def targetMinute = doc['CreationDateTime'].value.minuteOfHour;
+
+                          def targetTime = targetHour * 60 + targetMinute;
+                          def startTime = ${startHour} * 60 + ${minutes};
+                          def endTime = ${endHour} * 60 + ${minutes};
+                          
+                          return ${scriptReturnedString};
+                      `
+                  }
+              }
+          }
+      }
+    }
+  }
+  
+  private async getGlobalMaintenanceWindow(): Promise<{days: string[], time: string, duration: number}> {
+    try{
+      console.log(`About to get KMS parameter: ${KMS_KEY}`);
+      const res: string = (await this.papiClient.get(`/kms/parameters/${KMS_KEY}`)).Value;
+      console.log(`Successfully got KMS parameter: ${KMS_KEY}`);
+      return JSON.parse(res);
+    } catch(err){
+      console.error(`Could not get KMS parameter: ${KMS_KEY}, error: ${err}`);
+      throw err;
+    }
   }
 }
