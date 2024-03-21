@@ -65,6 +65,18 @@ class DataRetrievalService {
     } catch (error) {
         console.error(`Error: ${error}`);
     }
+
+    async validateHeaders(secretKey: string) {    
+        const papiClient = new PapiClient({
+            baseURL: this.client.BaseURL,
+            token: this.client.OAuthAccessToken,
+            addonUUID: this.client.AddonUUID,
+            actionUUID: this.client.ActionUUID,
+            addonSecretKey: secretKey
+        });
+    
+        await papiClient.get(`/var/sk/addons/${this.client.AddonUUID}/validate`); // throws error if invalid
+    }
 }
 
 export default DataRetrievalService;
