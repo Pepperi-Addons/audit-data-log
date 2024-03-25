@@ -1,5 +1,6 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client } from '@pepperi-addons/debug-server';
+import config from '../addon.config.json';
 
 class DataRetrievalService {
 
@@ -75,7 +76,7 @@ class DataRetrievalService {
             addonSecretKey: secretKey
         });
     
-        await papiClient.get(`/var/sk/addons/${this.client.AddonUUID}/validate`); // throws error if invalid
+        await papiClient.get(`/var/sk/addons/${config.AddonUUID}/validate`); // throws error if invalid
     }
 }
 
