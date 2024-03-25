@@ -4,6 +4,7 @@ import peach from 'parallel-each';
 import { ActivitiesCount } from './activitiesCount';
 import jwtDecode from "jwt-decode";
 import { Client } from '@pepperi-addons/debug-server/dist';
+import config from '../addon.config.json';
 
 const activitiesCount = new ActivitiesCount();
 const MAX_ITEMS_TO_SEARCH = 10000;
@@ -87,8 +88,7 @@ export class CPAPIUsage{
             const dslQuery = this.createDSLQuery(activityType, searchAfter);
 
             console.log(`About to search data in elastic, calling callElasticSearchLambda synchronously`);
-            const dataLogUrl: string = `${this.client.AddonUUID}/api/get_elastic_search_lambda`;
-            const res = await this.dataRetrievalService.papiClient.post(`/addons/api/${dataLogUrl}`, dslQuery);
+            const res = await this.dataRetrievalService.papiClient.addons.api.uuid(config.AddonUUID).file('api').func('get_elastic_search_lambda').post(dslQuery);
             console.log(`Successfully got data from elastic, calling callElasticSearchLambda synchronously`);
             return res;
         } catch(err){
