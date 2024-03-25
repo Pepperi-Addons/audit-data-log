@@ -1,5 +1,6 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client } from '@pepperi-addons/debug-server';
+import config from '../addon.config.json';
 
 class DataRetrievalService {
 
@@ -64,6 +65,18 @@ class DataRetrievalService {
         return getResourceRes;
     } catch (error) {
         console.error(`Error: ${error}`);
+    }
+
+    async validateHeaders(secretKey: string) {    
+        const papiClient = new PapiClient({
+            baseURL: this.client.BaseURL,
+            token: this.client.OAuthAccessToken,
+            addonUUID: this.client.AddonUUID,
+            actionUUID: this.client.ActionUUID,
+            addonSecretKey: secretKey
+        });
+    
+        await papiClient.get(`/var/sk/addons/${config.AddonUUID}/validate`); // throws error if invalid
     }
 }
 

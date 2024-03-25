@@ -18,6 +18,23 @@ import DataRetrievalService from './data-retrieval.service';
 
 const helper = new Helper()
 
+export async function get_elastic_search_lambda(client: Client, request: Request) {
+    const dataRetrievalService = new DataRetrievalService(client);
+    
+    const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
+    request.header = helper.normalizeHeaders(request.header)
+    await dataRetrievalService.validateHeaders(request.header['x-pepperi-secretkey'].toLowerCase());
+
+    try{
+        console.log(`About to search data in elastic, calling callElasticSearchLambda`);
+        const res = await callElasticSearchLambda(endpoint, 'POST', request.body);
+        console.log(`Successfully called callElasticSearchLambda and got data.`);
+        return res.resultObject.hits.hits;
+    } catch(err){
+        throw new Error(`Could not search data in elastic, error: ${err}`);
+    }
+}
+
 export async function get_audit_log_data(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
 
