@@ -118,9 +118,8 @@ export class AuditDataLogComponent implements OnInit {
       for (let user of userUalues.Values) {
         let userDetails = this.users[user.key];
         let email = userDetails?.Email ? userDetails?.Email : 'Pepperi Admin';
-        // var admin user doesnt arrive in users api
         if (!userDetails) {
-          this.users[user.key].Email = email;
+          this.users[user.key] = { Email: email };
         }
         userOptions.push({ value: email, count: user.doc_count });
       };
