@@ -2,20 +2,21 @@ import DataRetrievalService from './data-retrieval.service';
 import { CreatedObject } from './createdObject';
 import peach from 'parallel-each';
 import { ActivitiesCount } from './activitiesCount';
-import { Constants } from '../shared/constants';
-import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import jwtDecode from "jwt-decode";
+import { Client } from '@pepperi-addons/debug-server/dist';
+import config from '../addon.config.json';
 
 const activitiesCount = new ActivitiesCount();
-const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
+const MAX_ITEMS_TO_SEARCH = 10000;
 
 export class CPAPIUsage{
+    dataRetrievalService = new DataRetrievalService(this.client);
     m_papiClient;
     m_cpapiCreatedObjects: CreatedObject[];
     createdObjectMap: Map<string, number>;
     distributorUUID: string;
 
-    constructor(client){
+    constructor(private client: Client){
         this.m_papiClient = client;
         this.m_cpapiCreatedObjects = [];
         this.createdObjectMap = new Map([]);
@@ -73,7 +74,7 @@ export class CPAPIUsage{
             partialDataLogResult = await this.callElasticSearch(activityType, searchAfter);
             searchAfter = partialDataLogResult[partialDataLogResult.length - 1]?.sort;
             dataLogResult.push(...partialDataLogResult.map(hit => hit._source));
-        } while (partialDataLogResult.length > 0);
+        } while (partialDataLogResult.length === MAX_ITEMS_TO_SEARCH);
 
         const createdObjects: CreatedObject[] = dataLogResult.map((element:CreatedObject) => {
             return new CreatedObject(element.ActionUUID, element.ObjectKey, element.UserUUID, activityType)
@@ -84,18 +85,20 @@ export class CPAPIUsage{
 
     async callElasticSearch(activityType: string, searchAfter: number[]) {
         try{
-            console.log(`About to search data in elastic`);
-            const res = await callElasticSearchLambda(endpoint, 'POST', this.createDSLQuery(activityType, searchAfter) );
-            console.log(`Successfully got data from elastic.`);
-            return res.resultObject.hits.hits;
+            const dslQuery = this.createDSLQuery(activityType, searchAfter);
+
+            console.log(`About to search data in elastic, calling callElasticSearchLambda synchronously`);
+            const res = await this.dataRetrievalService.papiClient.addons.api.uuid(config.AddonUUID).file('api').func('get_elastic_search_lambda').post(dslQuery);
+            console.log(`Successfully got data from elastic, calling callElasticSearchLambda synchronously`);
+            return res;
         } catch(err){
-            throw new Error(`Could not search data in elastic, error: ${err}`);
+            throw new Error(`In callElasticSearch- could not search data in elastic, error: ${err}`);
         }
     }
 
     createDSLQuery(activityType: string, searchAfter: number[]) {
         const dslQuery = {
-            "size": 10000,
+            "size": MAX_ITEMS_TO_SEARCH,
             "_source": ["ActionUUID", "ObjectKey", "UserUUID", "Resource"],
             "query": {
                 "bool": {
