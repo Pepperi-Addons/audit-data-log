@@ -1,6 +1,6 @@
 {
   "AddonUUID": "00000000-0000-0000-0000-00000da1a109",
-  "AddonVersion": "1.1.27",
+  "AddonVersion": "1.1.33",
   "DebugPort": 4500,
   "WebappBaseUrl": "https://app.sandbox.pepperi.com",
   "DefaultEditor": "main",
@@ -22,7 +22,8 @@
     ],
     "Dependencies": {
       "pns": "1.0.86",
-      "pepperi_elastic_search": "0.0.67"
+      "pepperi_elastic_search": "0.0.67",
+      "kms": "1.0.1"
     }
   },
   "AddonPackage": {

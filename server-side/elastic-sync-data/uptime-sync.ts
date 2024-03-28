@@ -1,13 +1,13 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
 import { BaseSyncAggregationService } from "./base-sync-aggregation.service";
-import { HOURS_IN_DAY, MINUTES_IN_HOUR, MAINTENANCE_WINDOW_IN_HOURS, RETRY_OFF_TIME_IN_MINUTES } from "../entities";
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, RETRY_OFF_TIME_IN_MINUTES, KMS_KEY, AUDIT_LOGS_WEEKS_RANGE } from "../entities";
 
 const GAP_IN_SEQUENCE = 6;
 const MILLISECONDS_IN_MINUTE = 60000;
 
 export class UptimeSyncService extends BaseSyncAggregationService {
 
-    
+
     private codeJobUUID: string = '';
     private monitorLevel: number = 0;
     maintenanceWindow: number[] = [];
@@ -56,15 +56,18 @@ export class UptimeSyncService extends BaseSyncAggregationService {
             }
           }
         }
+
+        const globalMaintenanceWindow = await this.getGlobalMaintenanceWindow();
+        const syncAggregationQuery = this.getSyncAggregationQuery(monthlyDatesRange, globalMaintenanceWindow);
   
-        const auditLogData = await this.getElasticData(this.getSyncAggregationQuery(monthlyDatesRange));
+        const auditLogData = await this.getElasticData(syncAggregationQuery);
         const lastMonthDates = this.getLastMonthLogsDates()
   
         return { data: this.fixElasticResultObject(auditLogData, lastMonthDates.NumberOfDays) , dates: lastMonthDates.Range };
       }
     }
 
-    getSyncAggregationQuery(auditLogDateRange) {
+    getSyncAggregationQuery(auditLogDateRange, globalMaintenanceWindow: { Expression: string, Duration: number }[]) {
       return {
         "size": 1000,
         "sort": [
@@ -81,7 +84,8 @@ export class UptimeSyncService extends BaseSyncAggregationService {
               this.createQueryTerm("Status.Name.keyword", "Failure"),
               this.getMaintenanceWindowHoursScript(this.maintenanceWindow),
               auditLogDateRange
-            ]
+            ],
+            ...this.generateExcludedDateTime(globalMaintenanceWindow)
           }
         }
       }

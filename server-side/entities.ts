@@ -23,3 +23,5 @@ export const HOURS_IN_DAY = 24;
 export const MAXIMUM_NEMBER_OF_ITEMS = 10000;
 
 export const RESOURCE_CHUNK_SIZE = 500;
+
+export const KMS_KEY = `maintenance_window`;

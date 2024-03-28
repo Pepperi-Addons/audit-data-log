@@ -12,7 +12,17 @@ export class InternalSyncService extends BaseElasticSyncService {
     }
     
     async getSyncsResult() {
-        const res = await this.getElasticData(this.getSyncBody());
+        const globalMaintenanceWindow = await this.getGlobalMaintenanceWindow();
+        const query = {
+            bool: {
+                must: [
+                    this.getSyncBody(),
+                    { bool: this.generateExcludedDateTime(globalMaintenanceWindow) }
+                ]
+            }
+        }
+
+        const res = await this.getElasticData(this.buildQueryParameters(query, SYNCS_PAGE_SIZE));
         return { data: this.fixElasticResultObject(res), 
             searchAfter: res.resultObject.hits.hits?.[res.resultObject.hits.hits.length - 1]?.sort?.[0], // update search_after according to the last doucumnet in the list
             size: res.resultObject.hits.total.value }; // update total number of documents
@@ -40,7 +50,6 @@ export class InternalSyncService extends BaseElasticSyncService {
 
         const result = parse(whereClause, typesMapping);
         const conct = this.params.Where ? concat(true, result!, this.params.Where) : result;
-        const kibanaQuery = toKibanaQueryJSON(conct);            
-        return this.buildQueryParameters(kibanaQuery, SYNCS_PAGE_SIZE);
+        return toKibanaQueryJSON(conct);
     }
 }
