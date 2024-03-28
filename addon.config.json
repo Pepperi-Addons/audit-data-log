@@ -22,7 +22,8 @@
     ],
     "Dependencies": {
       "pns": "1.0.86",
-      "pepperi_elastic_search": "0.0.67"
+      "pepperi_elastic_search": "0.0.67",
+      "kms": "1.0.1"
     }
   },
   "AddonPackage": {
