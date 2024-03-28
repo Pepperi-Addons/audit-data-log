@@ -33,7 +33,7 @@
         "@pepperi-addons/pepperi-filters": "^1.0.37",
         "@pepperi-addons/system-addon-utils": "^1.0.4",
         "aws-sdk": "^2.899.0",
-        "cron-parser": "4.9.0",
+        "cron-parser": "4.8.1",
         "jwt-decode": "^3.1.2",
         "lodash": "^4.17.21",
         "parallel-each": "^1.1.7",

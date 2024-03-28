@@ -1,8 +1,9 @@
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import { parse, toKibanaQueryJSON } from '@pepperi-addons/pepperi-filters';
-import { AUDIT_LOG_INDEX, HEALTH_MONITOR_ADDON_UUID } from '../entities';
+import { AUDIT_LOGS_WEEKS_RANGE, AUDIT_LOG_INDEX, HEALTH_MONITOR_ADDON_UUID, KMS_KEY } from '../entities';
 import { Client } from '@pepperi-addons/debug-server/dist';
 import { PapiClient } from '@pepperi-addons/papi-sdk';
+import parser from 'cron-parser';
 
 export abstract class BaseElasticSyncService {
     papiClient: PapiClient;
@@ -111,4 +112,40 @@ export abstract class BaseElasticSyncService {
             console.log(`error getting maintenance window: ${err}`);
         }
     }
+
+  // get all global maintenance occurrences in the last AUDIT_LOGS_WEEKS_RANGE weeks, and add the range to the must_not array to exclude them from the logs
+  protected generateExcludedDateTime(globalMaintenanceWindow: { Expression: string, Duration: number }[]): { must_not: any[] } {
+    let prev: parser.CronDate;
+    const mustNotArray: any = [];
+    const now = new Date();
+    const logsStartDate = new Date(now.setDate(now.getDate() - (AUDIT_LOGS_WEEKS_RANGE * 7))); // get AUDIT_LOGS_WEEKS_RANGE weeks ago date
+
+    for(const expression of globalMaintenanceWindow) {
+      try{
+        const interval = parser.parseExpression(expression.Expression, { utc: true });
+        
+        while((prev = interval.prev()).getTime() >= logsStartDate.getTime()) { // while the current date is greater than the start of the logs date
+          const endDate = new Date(prev.getTime() + expression.Duration * 60 * 60 * 1000); // convert the duration to miliseconds, and add the it to the start time, to get the end time of the maintenance window
+          mustNotArray.push({ range: { CreationDateTime: { gte: prev.toISOString(), lte: endDate.toISOString() } } });
+        }
+      } catch(err) {
+        console.error(`Could not parse cron expression: ${expression.Expression}, error: ${err}`);
+      }
+    }
+
+    return { must_not: mustNotArray };
+  }
+  
+  // get global maintenance window from KMS
+  protected async getGlobalMaintenanceWindow(): Promise<{ Expression: string, Duration: number }[]> {
+    try{
+      console.log(`About to get KMS parameter: ${KMS_KEY}`);
+      const res: string = (await this.papiClient.get(`/kms/parameters/${KMS_KEY}`)).Value;
+      console.log(`Successfully got KMS parameter: ${KMS_KEY}`);
+      return JSON.parse(res);
+    } catch(err){
+      console.error(`Could not get KMS parameter: ${KMS_KEY}, error: ${err}`);
+      throw err;
+    }
+  }
 }
