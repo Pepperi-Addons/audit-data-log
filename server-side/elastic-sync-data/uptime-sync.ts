@@ -1,6 +1,7 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
 import { BaseSyncAggregationService } from "./base-sync-aggregation.service";
-import { HOURS_IN_DAY, MINUTES_IN_HOUR, MAINTENANCE_WINDOW_IN_HOURS, RETRY_OFF_TIME_IN_MINUTES, KMS_KEY, DAY_TO_NUMBER } from "../entities";
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, RETRY_OFF_TIME_IN_MINUTES, KMS_KEY, AUDIT_LOGS_WEEKS_RANGE } from "../entities";
+import parser from 'cron-parser';
 
 const GAP_IN_SEQUENCE = 6;
 const MILLISECONDS_IN_MINUTE = 60000;
@@ -66,7 +67,7 @@ export class UptimeSyncService extends BaseSyncAggregationService {
       }
     }
 
-    getSyncAggregationQuery(auditLogDateRange, globalMaintenanceWindow: { days: string[], time: string, duration: number }) {
+    getSyncAggregationQuery(auditLogDateRange, globalMaintenanceWindow: { Expression: string, Duration: number }[]) {
       return {
         "size": 1000,
         "sort": [
@@ -82,9 +83,9 @@ export class UptimeSyncService extends BaseSyncAggregationService {
               this.createQueryTerm("AuditInfo.JobMessageData.CodeJobUUID.keyword", this.codeJobUUID),
               this.createQueryTerm("Status.Name.keyword", "Failure"),
               this.getMaintenanceWindowHoursScript(this.maintenanceWindow),
-              this.getGlobalMaintenanceWindowScript(globalMaintenanceWindow),
               auditLogDateRange
-            ]
+            ],
+            "must_not": this.generateExcludedDateTime(globalMaintenanceWindow)
           }
         }
       }
@@ -129,44 +130,31 @@ export class UptimeSyncService extends BaseSyncAggregationService {
     return `${date.getMonth() + 1}/${date.getFullYear()}` 
   }
 
-  // exclude syncs that were created in the global maintenance window
-  private getGlobalMaintenanceWindowScript(globalMaintenanceWindow: { days: string[], time: string, duration: number }) {
-    let scriptReturnedString = '';
+  // get all global maintenance occurrences in the last AUDIT_LOGS_WEEKS_RANGE weeks, and add the range to the must_not array to exclude them from the logs
+  private generateExcludedDateTime(globalMaintenanceWindow: { Expression: string, Duration: number }[]): any[] {
+    let prev: parser.CronDate;
+    const mustNotArray: any = [];
+    const now = new Date();
+    const logsStartDate = new Date(now.setDate(now.getDate() - (AUDIT_LOGS_WEEKS_RANGE * 7))); // get AUDIT_LOGS_WEEKS_RANGE weeks ago date
 
-    const startHour = parseInt(globalMaintenanceWindow.time.split(':')[0]);
-    const endHour = (startHour + globalMaintenanceWindow.duration) % 24;
-    const minutes = parseInt(globalMaintenanceWindow.time.split(':')[1]);
-    
-    if(startHour > endHour) { // means we are at the next day
-      scriptReturnedString = `(${globalMaintenanceWindow.days.map(day => { return `(targetDay==${DAY_TO_NUMBER[day]} && targetTime>=startTime) || (targetDay==${(DAY_TO_NUMBER[day] + 1) % 7} && targetTime<=endTime)`}).join(' || ')})`;
-    } else {
-      scriptReturnedString = `(${globalMaintenanceWindow.days.map(day => { return `targetDay==${DAY_TO_NUMBER[day]}`}).join(' || ')}) && targetTime>=startTime && targetTime<=endTime`;
-    }
-
-    return {
-      bool: {
-          must_not: {
-              script: {
-                  script: { // excluding global maintenance window hours
-                      source: `
-                          def targetDay = doc['CreationDateTime'].value.dayOfWeek;
-                          def targetHour = doc['CreationDateTime'].value.hourOfDay;
-                          def targetMinute = doc['CreationDateTime'].value.minuteOfHour;
-
-                          def targetTime = targetHour * 60 + targetMinute;
-                          def startTime = ${startHour} * 60 + ${minutes};
-                          def endTime = ${endHour} * 60 + ${minutes};
-                          
-                          return ${scriptReturnedString};
-                      `
-                  }
-              }
-          }
+    for(const expression of globalMaintenanceWindow) {
+      try{
+        const interval = parser.parseExpression(expression.Expression, { utc: true });
+        
+        while((prev = interval.prev()).getTime() >= logsStartDate.getTime()) { // while the current date is greater than the start of the logs date
+          const endDate = new Date(prev.getTime() + expression.Duration * 60 * 60 * 1000); // convert the duration to miliseconds, and add the it to the start time, to get the end time of the maintenance window
+          mustNotArray.push({ range: { CreationDateTime: { gte: prev.toISOString(), lte: endDate.toISOString() } } });
+        }
+      } catch(err) {
+        console.error(`Could not parse cron expression: ${expression.Expression}, error: ${err}`);
       }
     }
+
+    return mustNotArray;
   }
   
-  private async getGlobalMaintenanceWindow(): Promise<{days: string[], time: string, duration: number}> {
+  // get global maintenance window from KMS
+  private async getGlobalMaintenanceWindow(): Promise<{ Expression: string, Duration: number }[]> {
     try{
       console.log(`About to get KMS parameter: ${KMS_KEY}`);
       const res: string = (await this.papiClient.get(`/kms/parameters/${KMS_KEY}`)).Value;

@@ -25,14 +25,3 @@ export const MAXIMUM_NEMBER_OF_ITEMS = 10000;
 export const RESOURCE_CHUNK_SIZE = 500;
 
 export const KMS_KEY = `maintenance_window`;
-
-export const DAY_TO_NUMBER = {
-    "Sunday": 0,
-    "Monday": 1,
-    "Tuesday": 2,
-    "Wednesday": 3,
-    "Thursday": 4,
-    "Friday": 5,
-    "Saturday": 6
-  }
-
