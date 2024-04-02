@@ -62,6 +62,13 @@ export async function get_filters_data(client: Client, request: Request) {
 }
 
 // for health monitor addon- get syncs data from elastic
+// daily downtime- for usage monitor data usage
+export async function get_last_day_downtime_from_elastic(client: Client, request: Request) {
+    request.header = helper.normalizeHeaders(request.header);
+    const uptimeSyncService = new UptimeSyncService(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID, request.body.MonitorLevel);
+    return await uptimeSyncService.getDailyDowntime();
+}
+
 // health dashbaord tab
 export async function get_sync_aggregations_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
