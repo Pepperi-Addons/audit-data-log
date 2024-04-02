@@ -1,6 +1,6 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
 import { BaseSyncAggregationService } from "./base-sync-aggregation.service";
-import { HOURS_IN_DAY, MINUTES_IN_HOUR, RETRY_OFF_TIME_IN_MINUTES, KMS_KEY, AUDIT_LOGS_WEEKS_RANGE } from "../entities";
+import { HOURS_IN_DAY, MINUTES_IN_HOUR, RETRY_OFF_TIME_IN_MINUTES } from "../entities";
 
 const GAP_IN_SEQUENCE = 6;
 const MILLISECONDS_IN_MINUTE = 60000;
@@ -16,6 +16,28 @@ export class UptimeSyncService extends BaseSyncAggregationService {
         super(client, ownerID);
         this.codeJobUUID = codejobUUID;
         this.monitorLevel = monitorLevel;
+    }
+
+    // get last day downtime value
+    // downtime will be calculated as (5 * number of consecutive failed syncs)
+    async getDailyDowntime() {
+      if(this.monitorLevel) {
+        const monthlyDatesRange = {
+          "range": {
+            "CreationDateTime": {
+              "gte": "now-24h", 
+              "lt": "now"
+            }
+          }
+        }
+
+        const globalMaintenanceWindow = await this.getGlobalMaintenanceWindow();
+        const syncAggregationQuery = this.getSyncAggregationQuery(monthlyDatesRange, globalMaintenanceWindow);
+  
+        const auditLogData = await this.getElasticData(syncAggregationQuery);
+        const res = this.removeNotInSequence(auditLogData.resultObject.hits.hits);
+        return { Downtime: res.length * RETRY_OFF_TIME_IN_MINUTES };
+      }
     }
     
     fixElasticResultObject(auditLogData, period) {
