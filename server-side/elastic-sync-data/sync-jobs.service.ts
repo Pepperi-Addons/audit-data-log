@@ -30,7 +30,8 @@ export class SyncJobsService extends BaseElasticSyncService {
                     return {
                         ...syncObjects,
                         PepperiVersion: resultObject?.ClientInfo?.SoftwareVersion || "",
-                        Device: (resultObject?.ClientInfo?.DeviceName + '(' + resultObject?.ClientInfo?.DeviceModel + ')') || "",
+                        Device: ( resultObject?.ClientInfo?.DeviceName && resultObject?.ClientInfo?.DeviceModel ) ? 
+                            (resultObject?.ClientInfo?.DeviceName + '(' + resultObject?.ClientInfo?.DeviceModel + ')') : "",
                         OSVersion: resultObject?.ClientInfo?.SystemVersion || "",
                         DeviceID: resultObject?.ClientInfo?.DeviceExternalID || "",
                         ClientType: resultObject?.ClientInfo?.SystemName || ""
