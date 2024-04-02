@@ -43,20 +43,26 @@ export class UptimeSyncService extends BaseSyncAggregationService {
     fixElasticResultObject(auditLogData, period) {
       let res = {};
       const today = new Date();
-      const lastMonthKey = this.getObjectPropName(new Date(new Date().setMonth(today.getMonth()-1)));
+      const dateNow = today.getDate();
       const currentMonthKey = this.getObjectPropName(today);
+      today.setDate(1); // setting the date to the first day of the month, to prevent the case where the current month has more days than the previous month (and then getting a wrong days calculation)
+      today.setMonth(today.getMonth() - 1); // setting the month to the previous month.
+      const lastMonthKey = this.getObjectPropName(today);
+
       const items = this.removeNotInSequence(auditLogData.resultObject.hits.hits)
       const months = this.groupByMonth(items);
-      res[lastMonthKey] = this.calculateUpTime(months[lastMonthKey] || 0, period);
-      res[currentMonthKey] = this.calculateUpTime(months[currentMonthKey] || 0, today.getDate());
+      res[lastMonthKey] = this.calculateUpTime(months[lastMonthKey] || 0, period) || '';
+      res[currentMonthKey] = this.calculateUpTime(months[currentMonthKey] || 0, dateNow);
       return res;
     }
 
     // The value is the number of sync monitor jobs runs that failed, multiply by 5 divide by (1440(=minutesInADay) * period(number of days in the month)).
     // (since each retry means 5 minutes without work.)
     private calculateUpTime(failureCount: number, period: number) {
+      if(period) {
         const calculatedFailedSyncs = ((1 - ((failureCount * RETRY_OFF_TIME_IN_MINUTES) / (MINUTES_IN_HOUR * HOURS_IN_DAY * period))) * 100).toFixed(2);
         return `${calculatedFailedSyncs}%`; // update each month uptime sync value
+      }
     }
 
     async getSyncsResult() {
@@ -83,7 +89,7 @@ export class UptimeSyncService extends BaseSyncAggregationService {
         const syncAggregationQuery = this.getSyncAggregationQuery(monthlyDatesRange, globalMaintenanceWindow);
   
         const auditLogData = await this.getElasticData(syncAggregationQuery);
-        const lastMonthDates = this.getLastMonthLogsDates()
+        const lastMonthDates = this.getFirstLogsDate(auditLogData);
   
         return { data: this.fixElasticResultObject(auditLogData, lastMonthDates.NumberOfDays) , dates: lastMonthDates.Range };
       }
@@ -150,5 +156,25 @@ export class UptimeSyncService extends BaseSyncAggregationService {
 
   private getObjectPropName(date: Date) {
     return `${date.getMonth() + 1}/${date.getFullYear()}` 
+  }
+
+  // calculate dates range of previous month logs
+  private getFirstLogsDate(auditLogData) {
+    let returnedObject: { Range: string, NumberOfDays: number } = { Range: '', NumberOfDays: 0 };
+    const today= new Date();
+    const dateMonthAgo = new Date(today.getFullYear(), today.getMonth(), 0); // get the last day of previous month
+
+    const logsStartDate = new Date(auditLogData.resultObject.hits.hits[0]._source.CreationDateTime); // get the first log date
+    if(logsStartDate.getMonth() === dateMonthAgo.getMonth()) { // if there's data in the last month
+      const firstLogsDay = logsStartDate.getDate();
+      const lastLogsDay = dateMonthAgo.getDate();
+      const numberOfDays = (lastLogsDay - firstLogsDay) || 1;
+
+      returnedObject = {
+        Range: `${firstLogsDay}-${lastLogsDay}/${dateMonthAgo.getMonth() + 1}`, // return dates range in dd1-dd2/mm format
+        NumberOfDays: numberOfDays
+      }; 
+    }
+    return returnedObject;
   }
 }
