@@ -21,15 +21,16 @@ export class UptimeSyncService extends BaseSyncAggregationService {
     fixElasticResultObject(auditLogData, period) {
       let res = {};
       const today = new Date();
+      const dateNow = today.getDate();
+      const currentMonthKey = this.getObjectPropName(today);
       today.setDate(1); // setting the date to the first day of the month, to prevent the case where the current month has more days than the previous month (and then getting a wrong days calculation)
       today.setMonth(today.getMonth() - 1); // setting the month to the previous month.
       const lastMonthKey = this.getObjectPropName(today);
 
-      const currentMonthKey = this.getObjectPropName(new Date());
       const items = this.removeNotInSequence(auditLogData.resultObject.hits.hits)
       const months = this.groupByMonth(items);
       res[lastMonthKey] = this.calculateUpTime(months[lastMonthKey] || 0, period) || '';
-      res[currentMonthKey] = this.calculateUpTime(months[currentMonthKey] || 0, (new Date).getDate());
+      res[currentMonthKey] = this.calculateUpTime(months[currentMonthKey] || 0, dateNow);
       return res;
     }
 
@@ -143,7 +144,7 @@ export class UptimeSyncService extends BaseSyncAggregationService {
 
     const logsStartDate = new Date(auditLogData.resultObject.hits.hits[0]._source.CreationDateTime); // get the first log date
     if(logsStartDate.getMonth() === dateMonthAgo.getMonth()) { // if there's data in the last month
-      const firstLogsDay = logsStartDate.getMonth() === dateMonthAgo.getMonth() ? logsStartDate.getDate() : 1;
+      const firstLogsDay = logsStartDate.getDate();
       const lastLogsDay = dateMonthAgo.getDate();
       const numberOfDays = (lastLogsDay - firstLogsDay) || 1;
 
