@@ -164,8 +164,8 @@ export class UptimeSyncService extends BaseSyncAggregationService {
     const today= new Date();
     const dateMonthAgo = new Date(today.getFullYear(), today.getMonth(), 0); // get the last day of previous month
 
-    const logsStartDate = new Date(auditLogData.resultObject.hits.hits[0]._source.CreationDateTime); // get the first log date
-    if(logsStartDate.getMonth() === dateMonthAgo.getMonth()) { // if there's data in the last month
+    const logsStartDate = new Date(auditLogData.resultObject.hits.hits[0]?._source?.CreationDateTime); // get the first log date
+    if(logsStartDate && logsStartDate.getMonth() === dateMonthAgo.getMonth()) { // if there's data in the last month
       const firstLogsDay = logsStartDate.getDate();
       const lastLogsDay = dateMonthAgo.getDate();
       const numberOfDays = (lastLogsDay - firstLogsDay) || 1;
