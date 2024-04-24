@@ -1,13 +1,12 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
-import { BaseSyncAggregationService } from "./base-sync-aggregation.service";
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, RETRY_OFF_TIME_IN_MINUTES } from "../entities";
+import { BaseKPIService } from "./base-kpi.service";
 
 const GAP_IN_SEQUENCE = 6;
 const MILLISECONDS_IN_MINUTE = 60000;
 
-export class UptimeSyncService extends BaseSyncAggregationService {
-
-
+export class UptimeSyncService extends BaseKPIService {
+  
     private codeJobUUID: string = '';
     private monitorLevel: number = 0;
     maintenanceWindow: number[] = [];
@@ -40,7 +39,7 @@ export class UptimeSyncService extends BaseSyncAggregationService {
       }
     }
     
-    fixElasticResultObject(auditLogData, period) {
+    protected fixElasticResultObject(auditLogData, period) {
       let res = {};
       const today = new Date();
       const dateNow = today.getDate();
@@ -51,14 +50,14 @@ export class UptimeSyncService extends BaseSyncAggregationService {
 
       const items = this.removeNotInSequence(auditLogData.resultObject.hits.hits)
       const months = this.groupByMonth(items);
-      res[lastMonthKey] = this.calculateUpTime(months[lastMonthKey] || 0, period) || '';
-      res[currentMonthKey] = this.calculateUpTime(months[currentMonthKey] || 0, dateNow);
+      res[lastMonthKey] = this.calculatePercentage(months[lastMonthKey] || 0, period) || '';
+      res[currentMonthKey] = this.calculatePercentage(months[currentMonthKey] || 0, dateNow);
       return res;
     }
 
     // The value is the number of sync monitor jobs runs that failed, multiply by 5 divide by (1440(=minutesInADay) * period(number of days in the month)).
     // (since each retry means 5 minutes without work.)
-    private calculateUpTime(failureCount: number, period: number) {
+    protected calculatePercentage(failureCount: number, period: number) {
       if(period) {
         const calculatedFailedSyncs = ((1 - ((failureCount * RETRY_OFF_TIME_IN_MINUTES) / (MINUTES_IN_HOUR * HOURS_IN_DAY * period))) * 100).toFixed(2);
         return `${calculatedFailedSyncs}%`; // update each month uptime sync value
@@ -67,35 +66,15 @@ export class UptimeSyncService extends BaseSyncAggregationService {
 
     async getSyncsResult() {
       this.maintenanceWindow = await this.getMaintenanceWindowHours();
-      return await this.getUptimeSync();
+      const result = await this.getUptimeSync();
+      return { data: this.fixElasticResultObject(result.AuditLogData, result.LastMonthDates.NumberOfDays) , dates: result.LastMonthDates.Range };
     }
 
     getStatusAggregationQuery() {
       return {}
     }
 
-    async getUptimeSync() {
-      if(this.monitorLevel) { // uptime sync cards are not available for monitor level 'Never' (0)
-        const monthlyDatesRange = {
-          "range": {
-            "CreationDateTime": {
-              "gte": "now/M-1M/M", 
-              "lt": "now"
-            }
-          }
-        }
-
-        const globalMaintenanceWindow = await this.getGlobalMaintenanceWindow();
-        const syncAggregationQuery = this.getSyncAggregationQuery(monthlyDatesRange, globalMaintenanceWindow);
-  
-        const auditLogData = await this.getElasticData(syncAggregationQuery);
-        const lastMonthDates = this.getFirstLogsDate(auditLogData);
-  
-        return { data: this.fixElasticResultObject(auditLogData, lastMonthDates.NumberOfDays) , dates: lastMonthDates.Range };
-      }
-    }
-
-    getSyncAggregationQuery(auditLogDateRange, globalMaintenanceWindow: { Expression: string, Duration: number }[]) {
+    protected getSyncAggregationQuery(auditLogDateRange, globalMaintenanceWindow: { Expression: string, Duration: number }[]) {
       return {
         "size": 1000,
         "sort": [
@@ -156,25 +135,5 @@ export class UptimeSyncService extends BaseSyncAggregationService {
 
   private getObjectPropName(date: Date) {
     return `${date.getMonth() + 1}/${date.getFullYear()}` 
-  }
-
-  // calculate dates range of previous month logs
-  private getFirstLogsDate(auditLogData) {
-    let returnedObject: { Range: string, NumberOfDays: number } = { Range: '', NumberOfDays: 0 };
-    const today= new Date();
-    const dateMonthAgo = new Date(today.getFullYear(), today.getMonth(), 0); // get the last day of previous month
-
-    const logsStartDate = new Date(auditLogData.resultObject.hits.hits[0]?._source?.CreationDateTime); // get the first log date
-    if(logsStartDate && logsStartDate.getMonth() === dateMonthAgo.getMonth()) { // if there's data in the last month
-      const firstLogsDay = logsStartDate.getDate();
-      const lastLogsDay = dateMonthAgo.getDate();
-      const numberOfDays = (lastLogsDay - firstLogsDay) || 1;
-
-      returnedObject = {
-        Range: `${firstLogsDay}-${lastLogsDay}/${dateMonthAgo.getMonth() + 1}`, // return dates range in dd1-dd2/mm format
-        NumberOfDays: numberOfDays
-      }; 
-    }
-    return returnedObject;
   }
 }

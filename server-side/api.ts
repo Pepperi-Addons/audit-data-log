@@ -15,6 +15,7 @@ import { SyncDataAggregations } from './elastic-sync-data/sync-data-aggregations
 import { UptimeSyncService } from './elastic-sync-data/uptime-sync';
 import { SmartFilters } from './elastic-sync-data/smart-filters.service';
 import DataRetrievalService from './data-retrieval.service';
+import { SyncEffectivenessService } from './elastic-sync-data/sync_effectiveness.service';
 
 const helper = new Helper()
 
@@ -76,10 +77,17 @@ export async function get_sync_aggregations_from_elastic(client: Client, request
     return await syncAggregationService.getSyncsResult();
 }
 
-// health dashbaord tab- uptime cards
+// KPI tab- uptime cards
 export async function get_uptime_sync_from_elastic(client: Client, request: Request) {
     request.header = helper.normalizeHeaders(request.header);
     const uptimeSyncService = new UptimeSyncService(client, request.header['x-pepperi-ownerid'], request.body.CodeJobUUID, request.body.MonitorLevel);
+    return await uptimeSyncService.getSyncsResult();
+}
+
+// KPI tab- sync effectiveness
+export async function get_sync_effectiveness_from_elastic(client: Client, request: Request) {
+    request.header = helper.normalizeHeaders(request.header);
+    const uptimeSyncService = new SyncEffectivenessService(client, request.header['x-pepperi-ownerid']);
     return await uptimeSyncService.getSyncsResult();
 }
 
