@@ -1,22 +1,22 @@
-import { BaseSyncAggregationService } from "./base-sync-aggregation.service";
 import { SYNC_FUNCTION_NAME, SYNC_UUID } from "../entities";
+import { BaseKPIService } from "./base-kpi.service";
 
-export class SyncEffectivenessService extends BaseSyncAggregationService {
+export class SyncEffectivenessService extends BaseKPIService {
 
     maintenanceWindow: number[] = [];
     
-    fixElasticResultObject(auditLogData) {
+    protected fixElasticResultObject(auditLogData) {
       let res = {};      
       const aggregationResult = auditLogData?.resultObject?.aggregations?.aggregation_buckets?.buckets;
       aggregationResult.forEach(element => {
         let aggregationResult = element?.status_filter?.buckets
-        res[element?.key_as_string] = this.calculateSync(aggregationResult?.failure.doc_count, aggregationResult?.total.doc_count) || ''
+        res[element?.key_as_string] = this.calculatePercentage(aggregationResult?.failure.doc_count, aggregationResult?.total.doc_count) || ''
         
       });
       return res;
     }
     
-    private calculateSync(failureCount: number, numberOfSyncs: number) {
+    protected calculatePercentage(failureCount: number, numberOfSyncs: number) {
         if(numberOfSyncs) {
             return `${((1 - (failureCount / numberOfSyncs)) * 100).toFixed(2)}%`;
         }
@@ -24,34 +24,15 @@ export class SyncEffectivenessService extends BaseSyncAggregationService {
 
     async getSyncsResult() {
       this.maintenanceWindow = await this.getMaintenanceWindowHours();
-      return await this.getUptimeSync();
+      const result = await this.getUptimeSync();
+      return { data: this.fixElasticResultObject(result.AuditLogData) , dates: result.LastMonthDates.Range };
     }
 
     getStatusAggregationQuery() {
       return {}
     }
 
-    private async getUptimeSync() {
-        const monthlyDatesRange = {
-            "range": {
-              "CreationDateTime": {
-                "gte": "now/M-1M/M", 
-                "lt": "now"
-              }
-            }
-          }
-
-        const globalMaintenanceWindow = await this.getGlobalMaintenanceWindow();
-        const syncAggregationQuery = this.getSyncAggregationQuery(monthlyDatesRange, globalMaintenanceWindow);
-  
-        const auditLogData = await this.getElasticData(syncAggregationQuery);
-        const lastMonthDates = this.getFirstLogsDate(auditLogData);
-  
-        return { data: this.fixElasticResultObject(auditLogData) , dates: lastMonthDates };
-    }
-    
-
-    getSyncAggregationQuery(auditLogDateRange, globalMaintenanceWindow: { Expression: string, Duration: number }[]) {
+    protected getSyncAggregationQuery(auditLogDateRange, globalMaintenanceWindow: { Expression: string, Duration: number }[]) {
       return {
         "size": 1,
         "_source": ["CreationDateTime"],
@@ -101,21 +82,5 @@ export class SyncEffectivenessService extends BaseSyncAggregationService {
             }
         }
       }
-  }
-
-  // calculate dates range of previous month logs
-  private getFirstLogsDate(auditLogData) {
-    let returnedObject: string = '';
-    const today= new Date();
-    const dateMonthAgo = new Date(today.getFullYear(), today.getMonth(), 0); // get the last day of previous month
-
-    const logsStartDate = new Date(auditLogData.resultObject.hits.hits[0]?._source?.CreationDateTime); // get the first log date
-    if(logsStartDate && logsStartDate.getMonth() === dateMonthAgo.getMonth()) { // if there's data in the last month
-      const firstLogsDay = logsStartDate.getDate();
-      const lastLogsDay = dateMonthAgo.getDate();
-
-      returnedObject = `${firstLogsDay}-${lastLogsDay}/${dateMonthAgo.getMonth() + 1}` // return dates range in dd1-dd2/mm format
-    }
-    return returnedObject;
   }
 }
