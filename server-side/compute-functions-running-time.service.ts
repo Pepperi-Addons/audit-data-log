@@ -109,7 +109,7 @@ export class ComputeFunctionsDuration{
             const addonName = this.addonsList.addonNameMap.get(element.key)
             element.aggragateByFunctionName.buckets.forEach(addonElement => {
                 const functionName = addonElement.key;
-                const duration = parseFloat((addonElement.durationSum.value).toFixed(2));
+                const duration = Number(addonElement.durationSum.value.toFixed(2));
                 const name = `${addonName}_${functionName}`;
                 const relationData: RelationResultType  = new RelationResultType(name, duration);
                 relationResultObject.push(relationData);
