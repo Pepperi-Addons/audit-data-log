@@ -26,9 +26,9 @@ export type UsageResultObject = {
 export class RelationResultType {
     Data: string;
     Description: string;
-    Size: string;
+    Size: number;
 
-    constructor(Data: string, Size: string){
+    constructor(Data: string, Size: number){
         this.Data = Data;
         this.Description = "Total computing time (minutes)";
         this.Size = Size
@@ -109,7 +109,7 @@ export class ComputeFunctionsDuration{
             const addonName = this.addonsList.addonNameMap.get(element.key)
             element.aggragateByFunctionName.buckets.forEach(addonElement => {
                 const functionName = addonElement.key;
-                const duration = (addonElement.durationSum.value).toFixed(2);
+                const duration = Number(addonElement.durationSum.value.toFixed(2));
                 const name = `${addonName}_${functionName}`;
                 const relationData: RelationResultType  = new RelationResultType(name, duration);
                 relationResultObject.push(relationData);
