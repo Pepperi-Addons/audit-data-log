@@ -160,7 +160,8 @@ async function upsertTransactionActivitiesRelation(papiClient, addonUUID){
         "Name": transactionActivitiesRelationName,
         "Type": "AddonAPI",
         "AddonRelativeURL":"/api/transactions_and_activities_data",
-        "AggregationFunction": "SUM"
+        "AggregationFunction": "SUM",
+        "Async": true
     }
 
     try{
@@ -179,7 +180,8 @@ async function upsertComputingTimeRelation(papiClient, addonUUID){
         "Name": computingTimeRelationName,
         "Type": "AddonAPI",
         "AddonRelativeURL":"/api/get_functions_computing_time_from_elastic",
-        "AggregationFunction": "SUM"
+        "AggregationFunction": "SUM",
+        "Async": true
     }
     try{
         await papiClient.addons.data.relations.upsert(computingTimeRelation);
