@@ -25,3 +25,14 @@ export const MAXIMUM_NEMBER_OF_ITEMS = 10000;
 export const RESOURCE_CHUNK_SIZE = 500;
 
 export const KMS_KEY = `maintenance_window`;
+
+export const TRANSACTIONS_ACTIVITIES_RELATION_NAME = "TransactionActivitiesRelation";
+export const TRANSACTIONS_ACTIVITIES_FUNCTION_NAME = "transactions_and_activities_data";
+
+export const COMPUTING_TIME_RELATION_NAME = "ComputingTime";
+export const COMPUTING_TIME_FUNCTION_NAME = "get_functions_computing_time_from_elastic";
+
+export const AUDIT_LOG_BLOCK_NAME = 'Audit_Data_Log';
+export const MOD_AUDIT_LOG_BLOCK_NAME = 'AuditDataLog';
+
+

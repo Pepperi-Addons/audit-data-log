@@ -1,0 +1,115 @@
+import { PapiClient, Relation } from '@pepperi-addons/papi-sdk'
+import { Client } from '@pepperi-addons/debug-server';
+import { AUDIT_LOG_BLOCK_NAME, MOD_AUDIT_LOG_BLOCK_NAME, COMPUTING_TIME_FUNCTION_NAME, TRANSACTIONS_ACTIVITIES_FUNCTION_NAME } from './entities';
+
+export class RelationsService {
+
+    papiClient: PapiClient;
+    filename = `file_${this.client.AddonUUID}`;
+
+    constructor(private client: Client) {
+        this.papiClient = new PapiClient({
+            baseURL: client.BaseURL,
+            token: client.OAuthAccessToken,
+            addonUUID: client.AddonUUID,
+            addonSecretKey: client.AddonSecretKey,
+            actionUUID: client.ActionUUID
+        });
+    }
+
+    async upsertRelation(relation: Relation): Promise<any> {
+        try{
+            console.log(`upserting relation: ${relation.Name}`);
+            await this.papiClient.addons.data.relations.upsert(relation);
+            console.log(`upserted relation: ${relation.Name}`);
+        } catch(error){
+            console.error(`error upserting relation: ${error}`);
+            throw new Error("error upserting relation: " + error);
+        }
+    }
+
+    async createSettingsRelations() {     
+        await this.createPageComponentRelation();
+        await this.createAduitLogSettingsRelation();
+        await this.createNewAduitLogSettingsRelation();
+    }
+
+    async createUsageMonitorRelations(){
+        await this.upsertTransactionActivitiesRelation();
+        await this.upsertComputingTimeRelation();
+    }
+
+    async createPageComponentRelation() {
+        await this.upsertRelation({
+            RelationName: 'AddonBlock',
+            Name: AUDIT_LOG_BLOCK_NAME,
+            Description: `${AUDIT_LOG_BLOCK_NAME} block`,
+            Type: "NgComponent",
+            SubType: "NG14",
+            AddonUUID: this.client.AddonUUID,
+            AddonRelativeURL: this.filename,
+            ComponentName: `AuditDataLogBlockComponent`, // This is should be the block component name (from the client-side)
+            ModuleName: `AuditDataLogBlockModule`, // This is should be the block module name (from the client-side)
+            ElementsModule: 'WebComponents',
+            ElementName: `block-element-${this.client.AddonUUID}`,
+        });
+    }
+
+    async createAduitLogSettingsRelation() {
+        await this.upsertRelation({
+            RelationName: "SettingsBlock",
+            GroupName: 'Audit Data Log',
+            SlugName: 'audit_data_log',
+            Name: 'AuditDataLog',
+            Description: 'Audit Data Log',
+            Type: "NgComponent",
+            SubType: "NG14",
+            AddonUUID: this.client.AddonUUID,
+            AddonRelativeURL: this.filename,
+            ComponentName: `AddonComponent`,
+            ModuleName: `AddonModule`,
+            ElementsModule: 'WebComponents',
+            ElementName: `settings-element-${this.client.AddonUUID}`,
+        });
+    } 
+
+    async createNewAduitLogSettingsRelation() {
+        await this.upsertRelation({
+            RelationName: 'AddonBlock',
+            Name: MOD_AUDIT_LOG_BLOCK_NAME,
+            Description: `${AUDIT_LOG_BLOCK_NAME} block`,
+            Type: "NgComponent",
+            SubType: "NG14",
+            AddonUUID: this.client.AddonUUID,
+            AddonRelativeURL: this.filename,
+            ComponentName: `AuditDataLogBlockComponent`, // This is should be the block component name (from the client-side)
+            ModuleName: `AuditDataLogBlockModule`, // This is should be the block module name (from the client-side)
+            ElementsModule: 'WebComponents',
+            ElementName: `block-element-${this.client.AddonUUID}`,
+        });
+    }    
+    
+    async upsertTransactionActivitiesRelation(){
+        await this.upsertRelation({
+            RelationName: "UsageMonitor",
+            AddonUUID: this.client.AddonUUID,
+            Name: TRANSACTIONS_ACTIVITIES_FUNCTION_NAME,
+            Type: "AddonAPI",
+            AddonRelativeURL:`/api/${TRANSACTIONS_ACTIVITIES_FUNCTION_NAME}`,
+            AggregationFunction: "SUM",
+            Async: true
+        });
+    }
+
+    async upsertComputingTimeRelation(){
+        await this.upsertRelation({
+            RelationName: "UsageMonitor",
+            AddonUUID: this.client.AddonUUID,
+            Name: COMPUTING_TIME_FUNCTION_NAME,
+            Type: "AddonAPI",
+            AddonRelativeURL:`/api/${COMPUTING_TIME_FUNCTION_NAME}`,
+            AggregationFunction: "SUM",
+            Async: true
+        });
+    }
+}
