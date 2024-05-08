@@ -88,7 +88,7 @@ export class CPAPIUsage{
             const dslQuery = this.createDSLQuery(activityType, searchAfter);
 
             console.log(`About to search data in elastic, calling callElasticSearchLambda synchronously`);
-            const res = await this.dataRetrievalService.papiClient.addons.api.uuid(config.AddonUUID).file('api').func('get_elastic_search_lambda').post(dslQuery);
+            const res = await this.dataRetrievalService.papiClient.addons.api.uuid(config.AddonUUID).file('api').func('get_elastic_search_lambda').post({}, dslQuery);
             console.log(`Successfully got data from elastic, calling callElasticSearchLambda synchronously`);
             return res;
         } catch(err){
