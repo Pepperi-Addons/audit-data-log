@@ -70,10 +70,10 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
         
         if (Semver.lte(request.body.FromVersion, '1.0.0')) { // for versions below 1.1.0
             await relationService.createSettingsRelations();
-            await permissionService.upsertPermissions();
         }
-        
-        if (Semver.lte(request.body.FromVersion, '1.1.0')) {
+
+        if (Semver.lte(request.body.FromVersion, '1.1.61')) {
+            await permissionService.upsertPermissions();
             await relationService.createUsageMonitorRelations();
         }
         return { success: true, resultObject: {} }
