@@ -359,8 +359,8 @@ export class AuditDataLogComponent implements OnInit {
           }
           if (filter.fieldId === 'AddonUUID') {
             let addonUUIDs = [];
-            values.forEach((value) => {
-              addonUUIDs.push(this.addons[value]);
+            values.forEach((entry) => {
+              addonUUIDs.push(Object.entries(this.addons).find(([key, value]) => value === entry));
             })
             valuesString = addonUUIDs.join(',');
           }
