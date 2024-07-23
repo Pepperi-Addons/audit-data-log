@@ -114,25 +114,12 @@ export async function get_smart_filters_from_elastic(client: Client, request: Re
 
 // get functions computing time from elastic
 export async function get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<any> {
-    let papiClient = new PapiClient({
-        baseURL: client.BaseURL,
-        token: client.OAuthAccessToken,
-        addonUUID: client.AddonUUID,
-        addonSecretKey: client.AddonSecretKey,
-        actionUUID: client.ActionUUID
-    });
-    return await papiClient.addons.api.uuid(client.AddonUUID).file('api').func('internal_get_functions_computing_time_from_elastic').post();
-    
+    // await client.ValidatePermission(PermissionManager.computingTimePolicyName); // validate only admins can get computed functions time
+
+    // const computingTime = new ComputeFunctionsDuration(client);
+    // const resultObject = await computingTime.getComputedTimeForUsage()
+    // return resultObject;    
 }
-
-export async function internal_get_functions_computing_time_from_elastic(client: Client, request: Request): Promise<{ Title: string, Resources: RelationResultType[] }>{
-    await client.ValidatePermission(PermissionManager.computingTimePolicyName); // validate only admins can get computed functions time
-
-    const computingTime = new ComputeFunctionsDuration(client);
-    const resultObject = await computingTime.getComputedTimeForUsage()
-    return resultObject;
-}
-
 
 export async function transactions_and_activities_data(client) {
     let CPapiUsage = new CPAPIUsage(client);
