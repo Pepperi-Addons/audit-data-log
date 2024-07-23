@@ -97,8 +97,7 @@ export class RelationsService {
                 Name: COMPUTING_TIME_FUNCTION_NAME,
                 Type: "AddonAPI",
                 AddonRelativeURL:`/api/${COMPUTING_TIME_FUNCTION_NAME}`,
-                AggregationFunction: "SUM",
-                Async: true
+                AggregationFunction: "SUM"
             }
         ]);
     }
