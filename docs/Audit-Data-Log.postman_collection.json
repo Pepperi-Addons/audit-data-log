@@ -1,0 +1,183 @@
+{
+	"info": {
+		"name": "Audit Data Log",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Versions",
+			"item": [
+				{
+					"name": "Upgrade",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"eval(pm.globals.get('poll-job-response'))"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{PAPI_BASE_URL}}/addons/installed_addons/{{ADDON_UUID}}/upgrade/1.2.1",
+							"host": [
+								"{{PAPI_BASE_URL}}"
+							],
+							"path": [
+								"addons",
+								"installed_addons",
+								"{{ADDON_UUID}}",
+								"upgrade",
+								"1.2.1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Installed Addon",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{PAPI_BASE_URL}}/addons/installed_addons/{{ADDON_UUID}}",
+							"host": [
+								"{{PAPI_BASE_URL}}"
+							],
+							"path": [
+								"addons",
+								"installed_addons",
+								"{{ADDON_UUID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Internal",
+			"item": [
+				{
+					"name": "Transactions and Activities relation",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ADDON_API_ASYNC_BASE_URL}}/api/transactions_and_activities_data",
+							"host": [
+								"{{ADDON_API_ASYNC_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"transactions_and_activities_data"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Debug Aggregation functions",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "// can replace DataType and debug HourlySyncs, LastDaySyncs, WeeklySyncs, MonthlySyncs aggregation functions\n{\n    \"DataType\": \"HourlySyncs\",\n    \"Offset\": 180\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{LOCAL_HOST_URL}}/api/get_sync_aggregations_from_elastic",
+							"host": [
+								"{{LOCAL_HOST_URL}}"
+							],
+							"path": [
+								"api",
+								"get_sync_aggregations_from_elastic"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{OAuth_Token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					"eval(pm.globals.get('auth-script'))"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "ADDON_UUID",
+			"value": "00000000-0000-0000-0000-00000da1a109",
+			"type": "string"
+		},
+		{
+			"key": "LOCAL_HOST_URL",
+			"value": "http://localhost:4500",
+			"type": "string"
+		},
+		{
+			"key": "ADDON_API_BASE_URL",
+			"value": "{{PAPI_BASE_URL}}/addons/api/{{ADDON_UUID}}",
+			"type": "string"
+		},
+		{
+			"key": "API_BASE_URL",
+			"value": "{{ADDON_API_BASE_URL}}",
+			"type": "string"
+		},
+		{
+			"key": "ADDON_API_ASYNC_BASE_URL",
+			"value": "{{PAPI_BASE_URL}}/addons/api/async/{{ADDON_UUID}}",
+			"type": "string"
+		}
+	]
+}
