@@ -6,8 +6,7 @@ import jwtDecode from 'jwt-decode';
 import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
-import { ComputeFunctionsDuration, RelationResultType } from './compute-functions-running-time.service'
-import { PapiClient, Helper } from '@pepperi-addons/papi-sdk';
+import { Helper } from '@pepperi-addons/papi-sdk';
 import PermissionManager from './permission-manager.service';
 import { InternalSyncService } from './elastic-sync-data/internal-sync.service';
 import { SyncJobsService } from './elastic-sync-data/sync-jobs.service';
@@ -26,16 +25,25 @@ export async function get_elastic_search_lambda(client: Client, request: Request
     request.header = helper.normalizeHeaders(request.header)
     await dataRetrievalService.validateHeaders(request.header['x-pepperi-secretkey'].toLowerCase());
 
-    try{
+    try {
         console.log(`About to search data in elastic, calling callElasticSearchLambda`);
         const res = await callElasticSearchLambda(endpoint, 'POST', request.body);
         console.log(`Successfully called callElasticSearchLambda and got data.`);
         return res.resultObject.hits.hits;
-    } catch(err){
+    } catch (err) {
         throw new Error(`Could not search data in elastic, error: ${err}`);
     }
 }
 
+export async function get_audit_log_data_by_key(client: Client, request: Request) {
+    const dataRetrievalService = new DataRetrievalService(client);
+    const auditLogs = await audit_data_logs_by_key(request);
+    const users = await dataRetrievalService.get_users(auditLogs, "UserUUID");
+    return {
+        AuditLogs: auditLogs,
+        Users: users,
+    }
+}
 export async function get_audit_log_data(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
 
@@ -284,7 +292,6 @@ export async function audit_data_logs(client: Client, request: Request) {
 
 
         QueryUtil.convertParamsToQuery(fields, where, order_by, body);
-
         // call ElasticSearchLambda directly
         const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
         const method = 'POST';
@@ -561,6 +568,97 @@ async function getQueryResults(queryId: any, cwl: any) {
         queryResults = await cwl.getQueryResults(queryResultsParams).promise();
     }
     return queryResults;
+}
+
+async function audit_data_logs_by_key(request: Request) {
+    try {
+        const page_size = 100;
+        const from = 0;
+        const fields = [
+            'ActionUUID',
+            'AddonUUID',
+            'ObjectKey',
+            'DistributorUUID',
+            'ObjectModificationDateTime',
+            'CreationDateTime',
+            'UserUUID',
+            'ActionType',
+            'Resource',
+            'UpdatedFields'
+        ];
+        // prepare script to filter by key
+        const source = `def result = [];
+                            for (field in params['_source']['UpdatedFields']) {
+                                if (field.FieldID == "${request.query.key}") {
+                                    result.add(field);
+                                }
+                            }
+                            return result;
+                        `;
+
+        let where: string[] = request.query.where ? request.query.where.split(" and ") : [];
+        let body = {
+            "size": page_size,
+            "from": from,
+            "track_total_hits": true,
+            "query": {
+                "bool": {
+                    "must": new Array()
+                }
+            },
+            _source: new Array(),
+            script_fields: {
+                filtered_updated_fields: {
+                    script: {
+                        source,
+                    }
+                }
+            }
+
+        };
+        const order_by = request.query.order_by ? request.query.order_by.split(" ") : undefined;
+        QueryUtil.convertParamsToQuery(fields, where, order_by, body);
+        const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
+        const method = 'POST';
+        const lambdaResponse = await callElasticSearchLambda(endpoint, method, JSON.stringify(body), null, true);
+        let response;
+        if (lambdaResponse.success) {
+            response = lambdaResponse.resultObject;
+        }
+        else {
+            throw new Error(lambdaResponse["errorMessage"]);
+        }
+
+        if (response.error) {
+            if (response.error.caused_by) {
+                throw new Error(response.error.caused_by.reason);
+            }
+            else {
+                throw new Error(response.error.type + ". " + response.error.reason);
+            }
+        }
+
+        if (response.errorType) {
+            if (response.errorMessage) {
+                throw new Error(response.errorMessage);
+            }
+        }
+        let docs = new Array();
+        response.hits.hits.forEach(item => {
+            if (request.query.key) {
+                if (item.fields?.filtered_updated_fields) {
+                    item['_source']['UpdatedFields'] = item.fields.filtered_updated_fields;
+                    docs.push(item._source);
+                }
+            } else {
+                docs.push(item._source);
+            }
+        });
+        return docs;
+    } catch (e) {
+        console.log(`error in audit_data_logs_by_key: ${(e as Error).message}`);
+        throw new Error((e as Error).message);
+    }
 }
 
 function getLogGroups() {
