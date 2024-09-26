@@ -1,6 +1,6 @@
 {
 	"info": {
-		"name": "Audit Data Log",
+		"name": "Audit-Data-Log",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -65,24 +65,6 @@
 			"name": "Internal",
 			"item": [
 				{
-					"name": "Transactions and Activities relation",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{ADDON_API_ASYNC_BASE_URL}}/api/transactions_and_activities_data",
-							"host": [
-								"{{ADDON_API_ASYNC_BASE_URL}}"
-							],
-							"path": [
-								"api",
-								"transactions_and_activities_data"
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "get_sync_aggregations_from_elastic",
 					"protocolProfileBehavior": {
 						"disableBodyPruning": true
@@ -92,7 +74,8 @@
 						"header": [
 							{
 								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
 								"type": "text"
 							}
 						],
@@ -106,9 +89,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_sync_aggregations_from_elastic",
+							"raw": "{{API_BASE_URL}}/api/get_sync_aggregations_from_elastic",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -128,7 +111,8 @@
 						"header": [
 							{
 								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
 								"type": "text"
 							}
 						],
@@ -142,9 +126,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_filters_data?distinct_fields={distinct_fields}&where={where}&search_string_fields={search_string_fields}",
+							"raw": "{{API_BASE_URL}}/api/get_filters_data?distinct_fields={distinct_fields}&where={where}&search_string_fields={search_string_fields}",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -175,7 +159,8 @@
 						"header": [
 							{
 								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
 								"type": "text"
 							}
 						],
@@ -189,9 +174,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_last_day_downtime_from_elastic",
+							"raw": "{{API_BASE_URL}}/api/get_last_day_downtime_from_elastic",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -208,7 +193,8 @@
 						"header": [
 							{
 								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
 								"type": "text"
 							}
 						],
@@ -222,9 +208,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_uptime_sync_from_elastic",
+							"raw": "{{API_BASE_URL}}/api/get_uptime_sync_from_elastic",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -244,7 +230,8 @@
 						"header": [
 							{
 								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
 								"type": "text"
 							}
 						],
@@ -258,9 +245,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_sync_effectiveness_from_elastic",
+							"raw": "{{API_BASE_URL}}/api/get_sync_effectiveness_from_elastic",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -277,7 +264,8 @@
 						"header": [
 							{
 								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
 								"type": "text"
 							}
 						],
@@ -291,9 +279,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_internal_syncs_from_elastic",
+							"raw": "{{API_BASE_URL}}/api/get_internal_syncs_from_elastic",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -310,7 +298,8 @@
 						"header": [
 							{
 								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
 								"type": "text"
 							}
 						],
@@ -324,9 +313,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_syncs_from_elastic",
+							"raw": "{{API_BASE_URL}}/api/get_syncs_from_elastic",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -343,7 +332,8 @@
 						"header": [
 							{
 								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
 								"type": "text"
 							}
 						],
@@ -357,9 +347,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_smart_filters_from_elastic",
+							"raw": "{{API_BASE_URL}}/api/get_smart_filters_from_elastic",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -387,9 +377,9 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/audit_data_logs?include_count=${include_count}&fields=${fields}&page=${page}&page_size=${page_size}&page=${page}&where=${where}&page=${page}&where=${where}&search_string=${search_string}&search_string_fields=${search_string_fields}&order_by=${order_by}",
+							"raw": "{{API_BASE_URL}}/api/audit_data_logs?include_count=${include_count}&fields=${fields}&page=${page}&page_size=${page_size}&page=${page}&where=${where}&page=${page}&where=${where}&search_string=${search_string}&search_string_fields=${search_string_fields}&order_by=${order_by}",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{API_BASE_URL}}"
 							],
 							"path": [
 								"api",
@@ -440,6 +430,29 @@
 									"key": "order_by",
 									"value": "${order_by}"
 								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "API",
+			"item": [
+				{
+					"name": "Transactions and Activities relation",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/transactions_and_activities_data",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"transactions_and_activities_data"
 							]
 						}
 					},
@@ -504,6 +517,11 @@
 		{
 			"key": "ADDON_API_ASYNC_BASE_URL",
 			"value": "{{PAPI_BASE_URL}}/addons/api/async/{{ADDON_UUID}}",
+			"type": "string"
+		},
+		{
+			"key": "HEALTH_MONITOR_UUID",
+			"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
 			"type": "string"
 		}
 	]
