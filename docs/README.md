@@ -18,7 +18,7 @@ Furthermore, audit data log expose a block for other addons inner use (to displa
 
 ## Deployment
 
-After a PR is merged into a release branch, an available version will be published.
+After a PR is merged into a release branch, an available version will be published. 
 
 ---
 
