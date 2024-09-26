@@ -1,6 +1,6 @@
 {
 	"info": {
-		"name": "Audit Data Log",
+		"name": "Audit-Data-Log",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -62,313 +62,8 @@
 			]
 		},
 		{
-			"name": "Internal",
+			"name": "API",
 			"item": [
-				{
-					"name": "Transactions and Activities relation",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{ADDON_API_ASYNC_BASE_URL}}/api/transactions_and_activities_data",
-							"host": [
-								"{{ADDON_API_ASYNC_BASE_URL}}"
-							],
-							"path": [
-								"api",
-								"transactions_and_activities_data"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "get_sync_aggregations_from_elastic",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "// can replace DataType and debug HourlySyncs, LastDaySyncs, WeeklySyncs, MonthlySyncs aggregation functions\n{\n    \"DataType\": \"HourlySyncs\",\n    \"Offset\": 180\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_sync_aggregations_from_elastic",
-							"host": [
-								"{{LOCAL_HOST_URL}}"
-							],
-							"path": [
-								"api",
-								"get_sync_aggregations_from_elastic"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "get_filters_data",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_filters_data?distinct_fields={distinct_fields}&where={where}&search_string_fields={search_string_fields}",
-							"host": [
-								"{{LOCAL_HOST_URL}}"
-							],
-							"path": [
-								"api",
-								"get_filters_data"
-							],
-							"query": [
-								{
-									"key": "distinct_fields",
-									"value": "{distinct_fields}"
-								},
-								{
-									"key": "where",
-									"value": "{where}"
-								},
-								{
-									"key": "search_string_fields",
-									"value": "{search_string_fields}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "get_last_day_downtime_from_elastic",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "// can replace MonitorLevel with 0/5/15 (health monitor monitor level)\n{\n    \"CodeJobUUID\": \"${YOUR_HEALTH_DASHBOARD_CodeJobUUID}\",\n    \"MonitorLevel\": 5\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_last_day_downtime_from_elastic",
-							"host": [
-								"{{LOCAL_HOST_URL}}"
-							],
-							"path": [
-								"api",
-								"get_last_day_downtime_from_elastic"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "get_uptime_sync_from_elastic",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "// can replace MonitorLevel with 0/5/15 (health monitor monitor level)\n{\n    \"CodeJobUUID\": \"${YOUR_HEALTH_DASHBOARD_CodeJobUUID}\",\n    \"MonitorLevel\": 5\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_uptime_sync_from_elastic",
-							"host": [
-								"{{LOCAL_HOST_URL}}"
-							],
-							"path": [
-								"api",
-								"get_uptime_sync_from_elastic"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "get_sync_effectiveness_from_elastic",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_sync_effectiveness_from_elastic",
-							"host": [
-								"{{LOCAL_HOST_URL}}"
-							],
-							"path": [
-								"api",
-								"get_sync_effectiveness_from_elastic"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "get_internal_syncs_from_elastic",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "// Params- filter paramters for internal sync tab. All are optional parameters.\n{\n    \"CodeJobUUID\": \"${YOUR_HEALTH_DASHBOARD_CodeJobUUID}\",\n    \"Params\": { \n        \"SearchAfter\": \"${YOUR_SearchAfter}\", \n        \"FromIndex\": \"${YOUR_FromIndex}\", \n        \"Where\": \"${YOUR_Where}\"\n    }\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_internal_syncs_from_elastic",
-							"host": [
-								"{{LOCAL_HOST_URL}}"
-							],
-							"path": [
-								"api",
-								"get_internal_syncs_from_elastic"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "get_syncs_from_elastic",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "// Params- filter paramters for sync tab. All are optional parameters.\n{\n    \"Params\": { \n        \"SearchAfter\": \"${YOUR_SearchAfter}\", \n        \"FromIndex\": \"${YOUR_FromIndex}\", \n        \"Where\": \"${YOUR_Where}\"\n    }\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_syncs_from_elastic",
-							"host": [
-								"{{LOCAL_HOST_URL}}"
-							],
-							"path": [
-								"api",
-								"get_syncs_from_elastic"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "get_smart_filters_from_elastic",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "X-Pepperi-OwnerID",
-								"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "// can replace DataType and debug 'InternalSync' | 'SyncJob'\n{\n    \"DataType\": \"SyncJob\",\n    \"CodeJobUUID\": \"${YOUR_HEALTH_DASHBOARD_CodeJobUUID}\",\n    \"Params\": {}\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/get_smart_filters_from_elastic",
-							"host": [
-								"{{LOCAL_HOST_URL}}"
-							],
-							"path": [
-								"api",
-								"get_smart_filters_from_elastic"
-							]
-						}
-					},
-					"response": []
-				},
 				{
 					"name": "audit_data_logs",
 					"protocolProfileBehavior": {
@@ -387,12 +82,11 @@
 							}
 						},
 						"url": {
-							"raw": "{{LOCAL_HOST_URL}}/api/audit_data_logs?include_count=${include_count}&fields=${fields}&page=${page}&page_size=${page_size}&page=${page}&where=${where}&page=${page}&where=${where}&search_string=${search_string}&search_string_fields=${search_string_fields}&order_by=${order_by}",
+							"raw": "{{PAPI_BASE_URL}}/audit_data_logs?include_count=${include_count}&fields=${fields}&page=${page}&page_size=${page_size}&page=${page}&where=${where}&page=${page}&where=${where}&search_string=${search_string}&search_string_fields=${search_string_fields}&order_by=${order_by}",
 							"host": [
-								"{{LOCAL_HOST_URL}}"
+								"{{PAPI_BASE_URL}}"
 							],
 							"path": [
-								"api",
 								"audit_data_logs"
 							],
 							"query": [
@@ -440,6 +134,321 @@
 									"key": "order_by",
 									"value": "${order_by}"
 								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Internal",
+			"item": [
+				{
+					"name": "Transactions and Activities relation",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/transactions_and_activities_data",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"transactions_and_activities_data"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_sync_aggregations_from_elastic",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "// can replace DataType and debug HourlySyncs, LastDaySyncs, WeeklySyncs, MonthlySyncs aggregation functions\n{\n    \"DataType\": \"HourlySyncs\",\n    \"Offset\": 180\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/get_sync_aggregations_from_elastic",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"get_sync_aggregations_from_elastic"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_filters_data",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/get_filters_data?distinct_fields={distinct_fields}&where={where}&search_string_fields={search_string_fields}",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"get_filters_data"
+							],
+							"query": [
+								{
+									"key": "distinct_fields",
+									"value": "{distinct_fields}"
+								},
+								{
+									"key": "where",
+									"value": "{where}"
+								},
+								{
+									"key": "search_string_fields",
+									"value": "{search_string_fields}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_last_day_downtime_from_elastic",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "// can replace MonitorLevel with 0/5/15 (health monitor monitor level)\n{\n    \"CodeJobUUID\": \"${YOUR_HEALTH_DASHBOARD_CodeJobUUID}\",\n    \"MonitorLevel\": 5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/get_last_day_downtime_from_elastic",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"get_last_day_downtime_from_elastic"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_uptime_sync_from_elastic",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "// can replace MonitorLevel with 0/5/15 (health monitor monitor level)\n{\n    \"CodeJobUUID\": \"${YOUR_HEALTH_DASHBOARD_CodeJobUUID}\",\n    \"MonitorLevel\": 5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/get_uptime_sync_from_elastic",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"get_uptime_sync_from_elastic"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_sync_effectiveness_from_elastic",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/get_sync_effectiveness_from_elastic",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"get_sync_effectiveness_from_elastic"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_internal_syncs_from_elastic",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "// Params- filter paramters for internal sync tab. All are optional parameters.\n{\n    \"CodeJobUUID\": \"${YOUR_HEALTH_DASHBOARD_CodeJobUUID}\",\n    \"Params\": { \n        \"SearchAfter\": \"${YOUR_SearchAfter}\", \n        \"FromIndex\": \"${YOUR_FromIndex}\", \n        \"Where\": \"${YOUR_Where}\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/get_internal_syncs_from_elastic",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"get_internal_syncs_from_elastic"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_syncs_from_elastic",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "// Params- filter paramters for sync tab. All are optional parameters.\n{\n    \"Params\": { \n        \"SearchAfter\": \"${YOUR_SearchAfter}\", \n        \"FromIndex\": \"${YOUR_FromIndex}\", \n        \"Where\": \"${YOUR_Where}\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/get_syncs_from_elastic",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"get_syncs_from_elastic"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_smart_filters_from_elastic",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Pepperi-OwnerID",
+								"value": "{{HEALTH_MONITOR_UUID}}",
+								"description": "used only by the helath monitor addon",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "// can replace DataType and debug 'InternalSync' | 'SyncJob'\n{\n    \"DataType\": \"SyncJob\",\n    \"CodeJobUUID\": \"${YOUR_HEALTH_DASHBOARD_CodeJobUUID}\",\n    \"Params\": {}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{ADDON_API_BASE_URL}}/api/get_smart_filters_from_elastic",
+							"host": [
+								"{{ADDON_API_BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"get_smart_filters_from_elastic"
 							]
 						}
 					},
@@ -504,6 +513,11 @@
 		{
 			"key": "ADDON_API_ASYNC_BASE_URL",
 			"value": "{{PAPI_BASE_URL}}/addons/api/async/{{ADDON_UUID}}",
+			"type": "string"
+		},
+		{
+			"key": "HEALTH_MONITOR_UUID",
+			"value": "7e15d4cc-55a7-4128-a9fe-0e877ba90069",
 			"type": "string"
 		}
 	]
