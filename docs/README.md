@@ -24,7 +24,7 @@ After a PR is merged into a release branch, an available version will be publish
 
 ## Debugging
 
-Use the postman internal folder to debug audit data log functions locally.
+Use the postman localhost folder to debug Health Monitor functions locally.
 In order to debug callElasticSearchLambda related functions, you'll need to perform the above steps:
 - Create an AWS Credentials file, named credentials, in a folder named .aws in your home directory. 
 - Configure AWS requested environment Access Keys (choose option 2, delete the first line of role and instead choose default).
