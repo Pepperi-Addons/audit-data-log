@@ -1,7 +1,6 @@
 import { PapiClient, Relation } from '@pepperi-addons/papi-sdk'
 import { Client } from '@pepperi-addons/debug-server';
-import { AUDIT_LOG_BLOCK_NAME, MOD_AUDIT_LOG_BLOCK_NAME, COMPUTING_TIME_FUNCTION_NAME, TRANSACTIONS_ACTIVITIES_FUNCTION_NAME } from './entities';
-
+import { AUDIT_LOG_BLOCK_NAME, MOD_AUDIT_LOG_BLOCK_NAME, COMPUTING_TIME_FUNCTION_NAME, TRANSACTIONS_ACTIVITIES_FUNCTION_NAME, PROPERT_AUDIT_BLOCK_NAME } from './entities';
 export class RelationsService {
 
     papiClient: PapiClient;
@@ -18,11 +17,11 @@ export class RelationsService {
     }
 
     private async upsertRelation(relation: Relation): Promise<any> {
-        try{
+        try {
             console.log(`upserting relation: ${relation.Name}`);
             await this.papiClient.addons.data.relations.upsert(relation);
             console.log(`upserted relation: ${relation.Name}`);
-        } catch(error){
+        } catch (error) {
             console.error(`error upserting relation: ${error}`);
             throw new Error("error upserting relation: " + error);
         }
@@ -34,7 +33,7 @@ export class RelationsService {
         }));
     }
 
-    async createSettingsRelations() {     
+    async createSettingsRelations() {
         await this.createRelations([
             {
                 RelationName: "SettingsBlock",
@@ -76,18 +75,31 @@ export class RelationsService {
                 ModuleName: `AuditDataLogBlockModule`, // This is should be the block module name (from the client-side)
                 ElementsModule: 'WebComponents',
                 ElementName: `block-element-${this.client.AddonUUID}`,
+            },
+            {
+                RelationName: 'AddonBlock',
+                Name: PROPERT_AUDIT_BLOCK_NAME,
+                Description: `${PROPERT_AUDIT_BLOCK_NAME} block`,
+                Type: "NgComponent",
+                SubType: "NG14",
+                AddonUUID: this.client.AddonUUID,
+                AddonRelativeURL: this.filename,
+                ComponentName: `PropertyAuditDataLogBlockComponent`, // This is should be the block component name (from the client-side)
+                ModuleName: `PropertyAuditDataLogBlockModule`, // This is should be the block module name (from the client-side)
+                ElementsModule: 'WebComponents',
+                ElementName: `property-audit-data-log-block-element-${this.client.AddonUUID}`,
             }
         ]);
     }
 
-    async createUsageMonitorRelations(){
+    async createUsageMonitorRelations() {
         await this.createRelations([
             {
                 RelationName: "UsageMonitor",
                 AddonUUID: this.client.AddonUUID,
                 Name: TRANSACTIONS_ACTIVITIES_FUNCTION_NAME,
                 Type: "AddonAPI",
-                AddonRelativeURL:`/api/${TRANSACTIONS_ACTIVITIES_FUNCTION_NAME}`,
+                AddonRelativeURL: `/api/${TRANSACTIONS_ACTIVITIES_FUNCTION_NAME}`,
                 AggregationFunction: "SUM",
                 Async: true
             },
@@ -96,7 +108,7 @@ export class RelationsService {
                 AddonUUID: this.client.AddonUUID,
                 Name: COMPUTING_TIME_FUNCTION_NAME,
                 Type: "AddonAPI",
-                AddonRelativeURL:`/api/${COMPUTING_TIME_FUNCTION_NAME}`,
+                AddonRelativeURL: `/api/${COMPUTING_TIME_FUNCTION_NAME}`,
                 AggregationFunction: "SUM"
             }
         ]);

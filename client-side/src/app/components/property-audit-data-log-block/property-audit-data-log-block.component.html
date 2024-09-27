@@ -1,0 +1,9 @@
+<pep-dialog [title]="hostObject.title" [showClose]="true" (close)="handleClose()">
+  <ng-container pep-dialog-content>
+    <pep-generic-list #glist1 [dataSource]="listDataSource" [inline]="true" [showTopBar]="false"
+      [tableViewType]="tableViewType" [zebraStripes]="true" [uuidMapping]="'ActionUUID'" [disabled]="false"
+      [selectionType]="'none'" title="">
+
+    </pep-generic-list>
+  </ng-container>
+</pep-dialog>

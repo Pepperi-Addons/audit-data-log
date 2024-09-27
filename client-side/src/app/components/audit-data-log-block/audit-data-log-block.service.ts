@@ -9,7 +9,7 @@ import {
     PepSessionService
 } from '@pepperi-addons/ngx-lib';
 import { PepDialogActionButton, PepDialogData, PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable } from 'rxjs';
 import { config } from '../../addon.config';
 @Injectable({ providedIn: 'root' })
 export class AuditDataLogBlock {
@@ -60,7 +60,7 @@ export class AuditDataLogBlock {
 
     async getSupportAdminUser() {
         const supportAdminUser = await this.papiClient.get('/distributor');
-         return supportAdminUser.SupportAdminUser.Name;
+        return supportAdminUser.SupportAdminUser.Name;
     }
     async getAddons() {
         return await this.papiClient.addons.iter({
@@ -150,6 +150,30 @@ export class AuditDataLogBlock {
             false
         );
     }
+
+    async property_audit_data_log_query(where: string, property: string) {
+        const params = {};
+        if (where) {
+            params[`where`] = where;
+        }
+        if (property) {
+            params['key'] = property;
+        }
+
+        params['order_by'] = 'ObjectModificationDateTime desc';
+        params['page_size'] = 200;
+
+
+        return await firstValueFrom(this.addonService.getAddonApiCall(
+            this.addonUUID,
+            'api',
+            'get_audit_log_data_by_key',
+            { params: params },
+            false
+        ));
+    }
+
+
     private buildCloudWatchParams(addon_uuid: string, action_uuid: string, search_string: string, search_string_fields: string, level: string, logGroups: string) {
         let params = {};
         // TODO - remove when the nucules will be real addon
