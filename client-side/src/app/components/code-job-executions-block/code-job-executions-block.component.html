@@ -1,1 +1,15 @@
-<p>code-job-executions-block works!</p>
+<ng-container pep-main-area>
+    <pep-generic-list
+    [addPadding]="true"
+    [dataSource]="dataSource" 
+    [uuidMapping]="'UUID'"
+    [showTopBar]="true" 
+    [inline]="false" 
+    noDataFoundMsg="No data found"   
+    [supportSorting]="true" 
+    [hideSelectAll]="true"
+    tableViewType="compact"
+    (fieldClick)="onFieldClick($event)"
+    >
+    </pep-generic-list>
+</ng-container>

@@ -1,5 +1,5 @@
 import jwt from 'jwt-decode';
-import { AuditLog, PapiClient, User } from '@pepperi-addons/papi-sdk';
+import { AddonData, AuditLog, PapiClient, User } from '@pepperi-addons/papi-sdk';
 import { Injectable } from '@angular/core';
 import { Document } from "../../../../../shared/models/document"
 
@@ -9,7 +9,7 @@ import {
     PepSessionService
 } from '@pepperi-addons/ngx-lib';
 import { PepDialogActionButton, PepDialogData, PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable } from 'rxjs';
 import { config } from '../../addon.config';
 @Injectable({ providedIn: 'root' })
 export class AuditDataLogBlock {
@@ -60,7 +60,7 @@ export class AuditDataLogBlock {
 
     async getSupportAdminUser() {
         const supportAdminUser = await this.papiClient.get('/distributor');
-         return supportAdminUser.SupportAdminUser.Name;
+        return supportAdminUser.SupportAdminUser.Name;
     }
     async getAddons() {
         return await this.papiClient.addons.iter({
@@ -192,5 +192,17 @@ export class AuditDataLogBlock {
             showClose: false,
         });
         this.dialogService.openDefaultDialog(dialogData);
+    }
+
+    async getAllExecutionLogs(key: string): Promise<AddonData[]> {
+        const searchString = `Key=${key}`;
+        return await firstValueFrom(this.addonService.postAddonApiCall(
+            this.addonUUID,
+            'api',
+            'get_all_executions',
+            {},
+            { params: {} },
+            false
+        ));
     }
 }
