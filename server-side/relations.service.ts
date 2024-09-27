@@ -1,6 +1,6 @@
 import { PapiClient, Relation } from '@pepperi-addons/papi-sdk'
 import { Client } from '@pepperi-addons/debug-server';
-import { AUDIT_LOG_BLOCK_NAME, MOD_AUDIT_LOG_BLOCK_NAME, COMPUTING_TIME_FUNCTION_NAME, TRANSACTIONS_ACTIVITIES_FUNCTION_NAME } from './entities';
+import { AUDIT_LOG_BLOCK_NAME, MOD_AUDIT_LOG_BLOCK_NAME, COMPUTING_TIME_FUNCTION_NAME, TRANSACTIONS_ACTIVITIES_FUNCTION_NAME, CODE_JOB_EXECUTIONS_BLOCK_NAME } from './entities';
 
 export class RelationsService {
 
@@ -76,6 +76,19 @@ export class RelationsService {
                 ModuleName: `AuditDataLogBlockModule`, // This is should be the block module name (from the client-side)
                 ElementsModule: 'WebComponents',
                 ElementName: `block-element-${this.client.AddonUUID}`,
+            },
+            {
+                RelationName: 'AddonBlock',
+                Name: CODE_JOB_EXECUTIONS_BLOCK_NAME,
+                Description: `${CODE_JOB_EXECUTIONS_BLOCK_NAME} block`,
+                Type: "NgComponent",
+                SubType: "NG14",
+                AddonUUID: this.client.AddonUUID,
+                AddonRelativeURL: this.filename,
+                ComponentName: `CodeJobExecutionsBlockComponent`, // This is should be the block component name (from the client-side)
+                ModuleName: `CodeJobExecutionsBlockModule`, // This is should be the block module name (from the client-side)
+                ElementsModule: 'WebComponents',
+                ElementName: `code-job-executions-block-element-${this.client.AddonUUID}`,
             }
         ]);
     }
