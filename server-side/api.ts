@@ -20,7 +20,7 @@ const helper = new Helper()
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
-    
+
     const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
     request.header = helper.normalizeHeaders(request.header)
     await dataRetrievalService.validateHeaders(request.header['x-pepperi-secretkey'].toLowerCase());
@@ -572,7 +572,7 @@ async function getQueryResults(queryId: any, cwl: any) {
 
 async function audit_data_logs_by_key(request: Request) {
     try {
-        const page_size = 100;
+        const page_size = request.query.page_size ? request.query.page_size : 200;
         const from = 0;
         const fields = [
             'ActionUUID',
