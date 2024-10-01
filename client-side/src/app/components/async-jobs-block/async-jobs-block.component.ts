@@ -1,53 +1,55 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { IPepGenericListDataSource } from "@pepperi-addons/ngx-composite-lib/generic-list";
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import { AuditDataLogBlock } from '../audit-data-log-block/audit-data-log-block.service';
-import { CodeJobExecutionsHostEvent } from '../../../../../shared/models/audit-log';
+import { PepDialogService } from '@pepperi-addons/ngx-lib/dialog';
+import { AsyncJobAuditLogDialogComponent } from './async-job-audit-log-dialog/async-job-audit-log-dialog.component';
 @Component({
-  selector: 'addon-code-job-executions-block',
-  templateUrl: './code-job-executions-block.component.html',
-  styleUrls: ['./code-job-executions-block.component.scss']
+  selector: 'addon-async-jobs-block',
+  templateUrl: './async-jobs-block.component.html',
+  styleUrls: ['./async-jobs-block.component.scss']
 })
-export class CodeJobExecutionsBlockComponent implements OnInit {
+export class AsyncJobsBlockComponent implements OnInit {
   dataSource: IPepGenericListDataSource;
   executionItems: AddonData;
+  // Host Object, where query.
   @Input() hostObject: {
-    key: string;
+    where: string;
   };
 
-  @Output() hostEvents: EventEmitter<
-    CodeJobExecutionsHostEvent
-  > = new EventEmitter<CodeJobExecutionsHostEvent>();
-  constructor(public translate: TranslateService, private addonService: AuditDataLogBlock) { }
+  constructor(public translate: TranslateService, private addonService: AuditDataLogBlock, public dialogService: PepDialogService,) { }
 
   ngOnInit(): void {
     this.reload();
   }
 
-  reload() {
+  /**
+   * Repopulate the data source
+   */
+  reload(): void {
     this.dataSource = this.getDataSource();
   }
 
-  onFieldClick(event) {
+  /**
+   * On Field click callback to open dialog to show audit log data
+   * @param event 
+   */
+  onFieldClick(event): void {
     if (event.key === 'UUID') { // handle link for opening audit log in executions list
       const auditLog = this.executionItems.find((element) => { return element.UUID === event.id });
-      this.hostEvents.emit({
-        name: 'onMenuItemClick',
-        action: 'show-audit-log',
-        data: {
-          auditLog: auditLog
-        }
-      })
+      this.dialogService.openDialog(AsyncJobAuditLogDialogComponent, auditLog);
     }
   }
 
+  /**
+   * this method return data source for generic list.
+   */
   private getDataSource(): IPepGenericListDataSource {
     return {
-      init: async (parameters) => {
-
-        this.mapExecutionsData();
-
+      init: async (_) => {
+        // get the job executions
+        await this.mapExecutionsData();
         return Promise.resolve({
           dataView: this.getDataView(),
           items: this.executionItems,
@@ -58,6 +60,10 @@ export class CodeJobExecutionsBlockComponent implements OnInit {
     } as IPepGenericListDataSource
   }
 
+  /**
+   * @private
+   * This method returns data view object
+  */
   private getDataView() {
     return {
       Context: {
@@ -126,8 +132,11 @@ export class CodeJobExecutionsBlockComponent implements OnInit {
     }
   }
 
-  private async mapExecutionsData() {
-    const auditLogExecutions = await this.addonService.getAllExecutionLogs(this.hostObject.key);
+  /**
+   * This method fetch the jobs and map them in a view model format
+   */
+  private async mapExecutionsData()  {
+    const auditLogExecutions = await this.addonService.getAsyncJobs(this.hostObject.where);
     this.executionItems = auditLogExecutions.map(element => {
       element.Status = element.Status.Name;
       element.StartTime = element.AuditInfo.JobMessageData.StartDateTime.toLocaleString();

@@ -194,15 +194,12 @@ export class AuditDataLogBlock {
         this.dialogService.openDefaultDialog(dialogData);
     }
 
-    async getAllExecutionLogs(key: string): Promise<AddonData[]> {
-        const searchString = `Key=${key}`;
-        return await firstValueFrom(this.addonService.postAddonApiCall(
-            this.addonUUID,
-            'api',
-            'get_all_executions',
-            {},
-            { params: {} },
-            false
-        ));
+    async getAsyncJobs(where: string): Promise<AddonData[]> {
+        try {
+            const allExecutions = await this.papiClient.get(`/audit_logs?where=${where}`);
+            return allExecutions;
+        } catch (error) {
+            console.error(`Got error while getting all executions for where query: ${where}- ${error}`)
+        }
     }
 }

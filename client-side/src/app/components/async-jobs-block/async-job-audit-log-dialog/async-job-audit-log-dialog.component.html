@@ -1,0 +1,5 @@
+<pep-dialog [title]="'Job Info' | translate" showClose="true" (close)="closeClicked()">
+    <ng-container pep-dialog-content>
+        <ngx-json-viewer [json]="data"></ngx-json-viewer>
+    </ng-container>
+</pep-dialog>

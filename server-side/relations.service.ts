@@ -85,10 +85,10 @@ export class RelationsService {
                 SubType: "NG14",
                 AddonUUID: this.client.AddonUUID,
                 AddonRelativeURL: this.filename,
-                ComponentName: `CodeJobExecutionsBlockComponent`, // This is should be the block component name (from the client-side)
-                ModuleName: `CodeJobExecutionsBlockModule`, // This is should be the block module name (from the client-side)
+                ComponentName: `AsyncJobsBlockComponent`, // This is should be the block component name (from the client-side)
+                ModuleName: `AsyncJobsBlockModule`, // This is should be the block module name (from the client-side)
                 ElementsModule: 'WebComponents',
-                ElementName: `code-job-executions-block-element-${this.client.AddonUUID}`,
+                ElementName: `async-jobs-block-element-${this.client.AddonUUID}`,
             }
         ]);
     }
