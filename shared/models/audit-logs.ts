@@ -1,19 +1,7 @@
 export interface PropertyAuditLogHost {
-    objectKey: string;
-    objectModificationStartTime: string;
-    objectModificationEndTime: string;
-    property: string;
-    title: string;
-}
-
-export interface PropertyAuditLogList {
-    ClientApplicationType: string;
-    CreationDateTime: string;
+    AddonUUID: string;
     ObjectKey: string;
-    UpdatedFields: string;
-    Email: string;
-    User: string;
-    ExternalID: string;
-    InternalID: string;
-    ActionUUID: string;
+    Resource: string;
+    FieldID: string;
+    Title: string;
 }

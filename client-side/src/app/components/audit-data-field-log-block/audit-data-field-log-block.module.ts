@@ -1,22 +1,21 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { PropertyAuditDataLogBlockComponent } from './property-audit-data-log-block.component';
-import { PepDialogModule } from '@pepperi-addons/ngx-lib/dialog';
+import { AuditDataFieldLogBlockComponent } from './audit-data-field-log-block.component';
 import { TranslateLoader, TranslateModule, TranslateService, TranslateStore } from '@ngx-translate/core';
 import { PepAddonService } from '@pepperi-addons/ngx-lib';
 import { config } from 'src/app/addon.config';
-import { PepGenericListModule } from '@pepperi-addons/ngx-composite-lib/generic-list';
-import { PepNgxCompositeLibModule } from '@pepperi-addons/ngx-composite-lib';
-
+import { PepListModule } from '@pepperi-addons/ngx-lib/list';
+import { PepPageLayoutModule } from '@pepperi-addons/ngx-lib/page-layout';
+import { PepUIModule } from 'src/app/modules/pepperi.module';
 
 
 @NgModule({
-  declarations: [PropertyAuditDataLogBlockComponent],
+  declarations: [AuditDataFieldLogBlockComponent],
   imports: [
     CommonModule,
-    PepDialogModule,
-    PepNgxCompositeLibModule,
-    PepGenericListModule,
+    PepListModule,
+    PepPageLayoutModule,
+    PepUIModule,
     TranslateModule.forChild({
       loader: {
         provide: TranslateLoader,
@@ -28,7 +27,7 @@ import { PepNgxCompositeLibModule } from '@pepperi-addons/ngx-composite-lib';
   ],
   providers: [TranslateStore]
 })
-export class PropertyAuditDataLogBlockModule {
+export class AuditDataFieldLogBlockModule {
   constructor(
     translate: TranslateService,
     private pepAddonService: PepAddonService

@@ -151,13 +151,13 @@ export class AuditDataLogBlock {
         );
     }
 
-    async property_audit_data_log_query(where: string, property: string) {
+    async field_id_audit_data_log_query(where: string, property: string) {
         const params = {};
         if (where) {
             params[`where`] = where;
         }
         if (property) {
-            params['key'] = property;
+            params['field_id'] = property;
         }
 
         params['order_by'] = 'ObjectModificationDateTime desc';
@@ -167,7 +167,7 @@ export class AuditDataLogBlock {
         return await firstValueFrom(this.addonService.getAddonApiCall(
             this.addonUUID,
             'api',
-            'get_audit_log_data_by_key',
+            'get_audit_log_data_by_field_id',
             { params: params },
             false
         ));

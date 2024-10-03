@@ -37,9 +37,9 @@ export async function get_elastic_search_lambda(client: Client, request: Request
     }
 }
 
-export async function get_audit_log_data_by_key(client: Client, request: Request) {
+export async function get_audit_log_data_by_field_id(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
-    const auditLogs = await audit_data_logs_by_key(request);
+    const auditLogs = await audit_data_logs_by_field_id(request);
     const users = await dataRetrievalService.get_users(auditLogs, "UserUUID");
     return {
         AuditLogs: auditLogs,
@@ -572,7 +572,7 @@ async function getQueryResults(queryId: any, cwl: any) {
     return queryResults;
 }
 
-async function audit_data_logs_by_key(request: Request) {
+async function audit_data_logs_by_field_id(request: Request) {
     try {
         const page_size = request.query.page_size ? request.query.page_size : 200;
         const from = 0;
@@ -588,10 +588,10 @@ async function audit_data_logs_by_key(request: Request) {
             'Resource',
             'UpdatedFields'
         ];
-        // prepare script to filter by key
+        // prepare script to filter by FieldID, to filter array of objects
         const source = `def result = [];
                             for (field in params['_source']['UpdatedFields']) {
-                                if (field.FieldID == "${request.query.key}") {
+                                if (field.FieldID == "${request.query.field_id}") {
                                     result.add(field);
                                 }
                             }
@@ -619,6 +619,7 @@ async function audit_data_logs_by_key(request: Request) {
 
         };
         const order_by = request.query.order_by ? request.query.order_by.split(" ") : undefined;
+        // prepare a query for elastic search
         QueryUtil.convertParamsToQuery(fields, where, order_by, body);
         const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
         const method = 'POST';
@@ -647,8 +648,9 @@ async function audit_data_logs_by_key(request: Request) {
         }
         let docs = new Array();
         response.hits.hits.forEach(item => {
-            if (request.query.key) {
+            if (request.query.field_id) {
                 if (item.fields?.filtered_updated_fields) {
+                    // replace with filtered data 
                     item['_source']['UpdatedFields'] = item.fields.filtered_updated_fields;
                     docs.push(item._source);
                 }
@@ -658,7 +660,7 @@ async function audit_data_logs_by_key(request: Request) {
         });
         return docs;
     } catch (e) {
-        console.log(`error in audit_data_logs_by_key: ${(e as Error).message}`);
+        console.log(`error in audit_data_logs_by_field_id: ${(e as Error).message}`);
         throw new Error((e as Error).message);
     }
 }

@@ -16,7 +16,7 @@ import { config } from './addon.config';
 import { PepAddonService } from '@pepperi-addons/ngx-lib';
 import { SettingsComponent } from './components/settings';
 import { AuditDataLogBlockComponent } from './components/audit-data-log-block';
-import { PropertyAuditDataLogBlockComponent } from './components/property-audit-data-log-block/property-audit-data-log-block.component';
+import { AuditDataFieldLogBlockComponent } from './components/audit-data-field-log-block/audit-data-field-log-block.component';
 
 @NgModule({
     declarations: [
@@ -58,7 +58,7 @@ export class AppModule implements DoBootstrap {
 
     ngDoBootstrap() {
         this.pepAddonService.defineCustomElement(`block-element-${config.AddonUUID}`, AuditDataLogBlockComponent, this.injector);
-        this.pepAddonService.defineCustomElement(`property-audit-data-log-block-element-${config.AddonUUID}`, PropertyAuditDataLogBlockComponent, this.injector);
+        this.pepAddonService.defineCustomElement(`audit-data-field-log-block-element-${config.AddonUUID}`, AuditDataFieldLogBlockComponent, this.injector);
         this.pepAddonService.defineCustomElement(`settings-element-${config.AddonUUID}`, SettingsComponent, this.injector);
     }
 

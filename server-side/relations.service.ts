@@ -1,6 +1,6 @@
 import { PapiClient, Relation } from '@pepperi-addons/papi-sdk'
 import { Client } from '@pepperi-addons/debug-server';
-import { AUDIT_LOG_BLOCK_NAME, MOD_AUDIT_LOG_BLOCK_NAME, COMPUTING_TIME_FUNCTION_NAME, TRANSACTIONS_ACTIVITIES_FUNCTION_NAME, PROPERT_AUDIT_BLOCK_NAME } from './entities';
+import { AUDIT_LOG_BLOCK_NAME, MOD_AUDIT_LOG_BLOCK_NAME, COMPUTING_TIME_FUNCTION_NAME, TRANSACTIONS_ACTIVITIES_FUNCTION_NAME, FIELD_AUDIT_LOG_BLOCK_NAME } from './entities';
 export class RelationsService {
 
     papiClient: PapiClient;
@@ -78,16 +78,16 @@ export class RelationsService {
             },
             {
                 RelationName: 'AddonBlock',
-                Name: PROPERT_AUDIT_BLOCK_NAME,
-                Description: `${PROPERT_AUDIT_BLOCK_NAME} block`,
+                Name: FIELD_AUDIT_LOG_BLOCK_NAME,
+                Description: `${FIELD_AUDIT_LOG_BLOCK_NAME} block`,
                 Type: "NgComponent",
                 SubType: "NG14",
                 AddonUUID: this.client.AddonUUID,
                 AddonRelativeURL: this.filename,
-                ComponentName: `PropertyAuditDataLogBlockComponent`, // This is should be the block component name (from the client-side)
-                ModuleName: `PropertyAuditDataLogBlockModule`, // This is should be the block module name (from the client-side)
+                ComponentName: `AuditDataFieldLogBlockComponent`, // This is should be the block component name (from the client-side)
+                ModuleName: `AuditDataFieldLogBlockModule`, // This is should be the block module name (from the client-side)
                 ElementsModule: 'WebComponents',
-                ElementName: `property-audit-data-log-block-element-${this.client.AddonUUID}`,
+                ElementName: `audit-data-field-log-block-element-${this.client.AddonUUID}`,
             }
         ]);
     }
