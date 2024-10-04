@@ -111,33 +111,34 @@ export class AuditDataFieldLogBlockComponent implements OnInit {
     const user = this.users[document.UserUUID];
     switch (key) {
       case "ID":
-        dataRowField.Title = 'Client Application Type';
+        dataRowField.Title = this.translate.instant('Client Application Type');
         dataRowField.FormattedValue = dataRowField.Value = '';
         break;
       case "CreationDateTime":
-        dataRowField.Title = "Creation Date(time in UTC)";
+        dataRowField.Title = this.translate.instant('Creation Date(time in UTC)');
         break;
 
       case "UpdatedFields":
         const updateFieldStr = this.buildUpdatedFieldsTable(document.UpdatedFields);
         dataRowField.FormattedValue = dataRowField.Value = updateFieldStr;
-        dataRowField.Title = `${this.hostObject.FieldID} After`;
+        dataRowField.Title = `${this.hostObject.FieldID} ${this.translate.instant('After')}`;
         break;
       case "Email":
         dataRowField.FormattedValue = dataRowField.Value = user.Email;
+        dataRowField.Title = this.translate.instant('Email');
         break;
       case 'User':
-        dataRowField.Title = 'Name';
+        dataRowField.Title = this.translate.instant('Name') ;
         dataRowField.FormattedValue = dataRowField.Value = `${user.FirstName} ${user.LastName}`
         break;
 
       case "ExternalID":
-        dataRowField.Title = 'User External ID';
+        dataRowField.Title = this.translate.instant('User External ID');
         dataRowField.ColumnWidth = 5;
         dataRowField.FormattedValue = dataRowField.Value = user.ExternalID;
         break;
       case "InternalID":
-        dataRowField.Title = "User ID";
+        dataRowField.Title = this.translate.instant('User ID');
         dataRowField.FormattedValue = dataRowField.Value = user.InternalID;
         break;
       default:

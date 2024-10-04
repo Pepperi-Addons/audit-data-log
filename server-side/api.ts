@@ -17,8 +17,6 @@ import DataRetrievalService from './data-retrieval.service';
 import { SyncEffectivenessService } from './elastic-sync-data/sync_effectiveness.service';
 
 const helper = new Helper()
-const AWS = require('aws-sdk');
-AWS.config.update({ region: 'us-west-2' });
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
