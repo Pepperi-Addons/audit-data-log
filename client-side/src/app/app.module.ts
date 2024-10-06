@@ -16,6 +16,7 @@ import { config } from './addon.config';
 import { PepAddonService } from '@pepperi-addons/ngx-lib';
 import { SettingsComponent } from './components/settings';
 import { AuditDataLogBlockComponent } from './components/audit-data-log-block';
+import { AsyncJobsBlockComponent } from './components/async-jobs-block/async-jobs-block.component';
 
 @NgModule({
     declarations: [
@@ -57,6 +58,8 @@ export class AppModule implements DoBootstrap {
 
     ngDoBootstrap() {
         this.pepAddonService.defineCustomElement(`block-element-${config.AddonUUID}`, AuditDataLogBlockComponent, this.injector);
+        // ABI to view async jobs
+        this.pepAddonService.defineCustomElement(`async-jobs-block-element-${config.AddonUUID}`, AsyncJobsBlockComponent, this.injector);
         this.pepAddonService.defineCustomElement(`settings-element-${config.AddonUUID}`, SettingsComponent, this.injector);
     }
 

@@ -1,0 +1,16 @@
+<ng-container pep-main-area>
+    <pep-generic-list
+    [addPadding]="true"
+    [dataSource]="dataSource" 
+    [uuidMapping]="'UUID'"
+    [showTopBar]="true" 
+    [inline]="false" 
+    noDataFoundMsg="'No data found' | translate"   
+    [supportSorting]="false" 
+    tableViewType="compact"
+    selectionType="none"
+    (fieldClick)="onFieldClick($event)"
+    [title]="'Async Jobs' | translate"
+    >
+    </pep-generic-list>
+</ng-container>
