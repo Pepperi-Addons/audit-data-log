@@ -21,17 +21,17 @@ const helper = new Helper()
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
-    
+
     const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
     request.header = helper.normalizeHeaders(request.header)
     await dataRetrievalService.validateHeaders(request.header['x-pepperi-secretkey'].toLowerCase());
 
-    try{
+    try {
         console.log(`About to search data in elastic, calling callElasticSearchLambda`);
         const res = await callElasticSearchLambda(endpoint, 'POST', request.body);
         console.log(`Successfully called callElasticSearchLambda and got data.`);
         return res.resultObject.hits.hits;
-    } catch(err){
+    } catch (err) {
         throw new Error(`Could not search data in elastic, error: ${err}`);
     }
 }
@@ -146,9 +146,94 @@ export async function transactions_and_activities_data(client) {
     return returnObject;
 }
 
+/**
+ * Function is for batch upsert of audit data logs into elastic search.
+ * @param client 
+ * @param request 
+ */
+export async function bulk_upsert_audit_data_logs(client: Client, request: Request) {
+    console.log(`Got bulk_upsert_audit_data_logs request - body.WriteMode: ${request.body.WriteMode}`);
+
+    try {
+        if (request.method !== 'POST') {
+            throw new Error("This operation is only available in POST");
+        }
+        let body = request.body;
+        if (body.WriteMode !== 'Insert') {
+            throw new Error("Only Insert operation allowed in 'WriteMode'");
+        }
+        const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
+        const dataRetrievalService = new DataRetrievalService(client);
+        const isSecretKeyValid = await validateSecretKey(request.header['x-pepperi-secretkey'], dataRetrievalService);
+        if (!isSecretKeyValid) {
+            throw new Error('Secret key is invalid');
+        }
+        const dateString = new Date().toISOString();
+        let bulkBody = new Array();
+
+        // objects cannot be empty
+        if (!body.Objects.length || !body.Objects) {
+            throw new Error("Objects array is mandatory and must not be empty.");
+        }
+
+        // if objects length is greater than max length defined, throw an error
+        if (body.Objects.length > 500) {
+            throw new Error("Objects array can contain at most 500 objects")
+        }
+
+        for (const object of body.Objects) {
+
+            if (object[`UpdatedFields`]) {
+                for (const updatedField of object[`UpdatedFields`]) {
+                    // if the type of NewValue is object, then stringify it
+                    if (typeof updatedField.NewValue === 'object') {
+                        updatedField.NewValue = JSON.stringify(updatedField.NewValue);
+                    }
+                    // if the type of OldValue is object, then stringify it
+                    if (typeof updatedField.OldValue === 'object') {
+                        updatedField.OldValue = JSON.stringify(updatedField.OldValue);
+                    }
+                }
+            }
+
+            const doc: Document = {
+                ActionUUID: object.ActionUUID,
+                ObjectKey: object.ObjectUUID,
+                ObjectModificationDateTime: object.ModificationDate,
+                UserUUID: object.UserUUID,
+                Resource: object.ObjectType,
+                UpdatedFields: <UpdatedField[]>object[`UpdatedFields`],
+                DistributorUUID: distributorUUID,
+                CreationDateTime: dateString,
+                AddonUUID: client.AddonUUID,
+                ActionType: "Insert"
+            }
+
+            bulkBody.push({ "index": { "_index": Constants.AUDIT_DATA_LOG_INDEX, "_type": "_doc" } });
+            bulkBody.push(doc);
+        }
+
+        let bulkBodyNDJSON = "";
+
+        for (const line of bulkBody) {
+            bulkBodyNDJSON = bulkBodyNDJSON + JSON.stringify(line) + os.EOL;
+        };
+
+        switch (body.WriteMode) {
+            case "Insert":
+                await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
+                break;
+        };
+
+        console.log(`finish bulk_upsert_audit_data_logs to elastic search`);
+    } catch (error) {
+        console.log(`error in audit_data_log: ${(error as Error).message}`);
+        return error;
+    }
+
+}
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
-
     let body = request.body;
     console.log(`start write data log to elastic search ActionUUID:${body.Message.ActionUUID}`);
     const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
@@ -608,4 +693,34 @@ function buildInsightFilter(client: Client, request: Request) {
         filter += ` and (${arr.join(" OR ")})`;
     }
     return filter;
+}
+
+/**
+ * Checks if the secret key of the addon is correct
+ * @param secretKey 
+ * @param dataRetrievalService 
+ * @returns true if the secret key is valid, false otherwise
+ */
+async function validateSecretKey(secretKey: string, dataRetrievalService: DataRetrievalService) {
+    if (secretKey) {
+        try {
+            await dataRetrievalService.validateHeaders(secretKey.toLowerCase());
+            return true;
+        }
+        catch (err) {
+            if (err instanceof Error) {
+                // the following lines make sure that the error doesn't expose implementation details about the validation of the key
+                let errorMessage = err.message.match(/error: (\{.+\})/);
+                if (errorMessage && errorMessage.length > 1) {
+                    let errorObject = JSON.parse(errorMessage[1]);
+                    if (errorObject.fault?.faultstring)
+                        throw new Error(errorObject.fault.faultstring);
+                }
+            }
+            throw new Error("Failed to verify secret key");
+        }
+    }
+    else {
+        throw new Error("Secret key was not provided");
+    }
 }
