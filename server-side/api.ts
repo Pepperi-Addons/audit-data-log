@@ -7,7 +7,7 @@ import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
 import { ComputeFunctionsDuration, RelationResultType } from './compute-functions-running-time.service'
-import { PapiClient, Helper } from '@pepperi-addons/papi-sdk';
+import { PapiClient, Helper, AddonData } from '@pepperi-addons/papi-sdk';
 import PermissionManager from './permission-manager.service';
 import { InternalSyncService } from './elastic-sync-data/internal-sync.service';
 import { SyncJobsService } from './elastic-sync-data/sync-jobs.service';
@@ -16,6 +16,7 @@ import { UptimeSyncService } from './elastic-sync-data/uptime-sync';
 import { SmartFilters } from './elastic-sync-data/smart-filters.service';
 import DataRetrievalService from './data-retrieval.service';
 import { SyncEffectivenessService } from './elastic-sync-data/sync_effectiveness.service';
+import { UtilitiesService } from './utilities.service'; 
 
 const helper = new Helper()
 
@@ -151,26 +152,20 @@ export async function transactions_and_activities_data(client) {
  * @param client 
  * @param request 
  */
-export async function bulk_upsert_audit_data_logs(client: Client, request: Request) {
-    console.log(`Got bulk_upsert_audit_data_logs request - body.WriteMode: ${request.body.WriteMode}`);
-
+export async function upsert_audit_data_logs(client: Client, request: Request) {
+    console.log(`Got upsert_audit_data_logs request - body.WriteMode: ${request.body.WriteMode}`);
+    const utilitiesService = new UtilitiesService();
     try {
         if (request.method !== 'POST') {
             throw new Error("This operation is only available in POST");
         }
-        let body = request.body;
-        if (body.WriteMode !== 'Insert') {
-            throw new Error("Only Insert operation allowed in 'WriteMode'");
-        }
+        request.header = helper.normalizeHeaders(request.header);
         const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
-        const dataRetrievalService = new DataRetrievalService(client);
-        const isSecretKeyValid = await validateSecretKey(request.header['x-pepperi-secretkey'], dataRetrievalService);
-        if (!isSecretKeyValid) {
-            throw new Error('Secret key is invalid');
-        }
+        await utilitiesService.validateOwner(client, request);
         const dateString = new Date().toISOString();
         let bulkBody = new Array();
 
+        let body = request.body;
         // objects cannot be empty
         if (!body.Objects.length || !body.Objects) {
             throw new Error("Objects array is mandatory and must not be empty.");
@@ -181,7 +176,15 @@ export async function bulk_upsert_audit_data_logs(client: Client, request: Reque
             throw new Error("Objects array can contain at most 500 objects")
         }
 
+        const responseArr: {
+            Key: string;
+            Status: string;
+            Details?: string
+        }[] = [];
         for (const object of body.Objects) {
+            if (!utilitiesService.validateObject(object, client.AddonUUID, responseArr)) {
+                continue; // Skip to the next object if validation fails
+            }
 
             if (object[`UpdatedFields`]) {
                 for (const updatedField of object[`UpdatedFields`]) {
@@ -195,18 +198,19 @@ export async function bulk_upsert_audit_data_logs(client: Client, request: Reque
                     }
                 }
             }
-
-            const doc: Document = {
+    
+            const doc: AddonData = {
                 ActionUUID: object.ActionUUID,
-                ObjectKey: object.ObjectUUID,
-                ObjectModificationDateTime: object.ModificationDate,
-                UserUUID: object.UserUUID,
-                Resource: object.ObjectType,
+                ObjectKey: object.ObjectKey,
+                ObjectModificationDateTime: object.ObjectModificationDateTime,
+                Resource: object.Resource,
+                ActionType: object.ActionType,
+                Source: object.Source,
                 UpdatedFields: <UpdatedField[]>object[`UpdatedFields`],
                 DistributorUUID: distributorUUID,
                 CreationDateTime: dateString,
+                // UserUUID: object.UserUUID,
                 AddonUUID: client.AddonUUID,
-                ActionType: "Insert"
             }
 
             bulkBody.push({ "index": { "_index": Constants.AUDIT_DATA_LOG_INDEX, "_type": "_doc" } });
@@ -219,13 +223,11 @@ export async function bulk_upsert_audit_data_logs(client: Client, request: Reque
             bulkBodyNDJSON = bulkBodyNDJSON + JSON.stringify(line) + os.EOL;
         };
 
-        switch (body.WriteMode) {
-            case "Insert":
-                await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
-                break;
-        };
-
-        console.log(`finish bulk_upsert_audit_data_logs to elastic search`);
+        const dataRetrievalService = new DataRetrievalService(client);
+        const response = await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
+        // push data into responseArr
+        console.log('response>>>>>>>>>>>>', response)
+        console.log(`finish upsert_audit_data_logs to elastic search`);
     } catch (error) {
         console.log(`error in audit_data_log: ${(error as Error).message}`);
         return error;
@@ -322,6 +324,7 @@ export async function post_to_elastic_search(client: Client, request: Request) {
     if (response.resultObject.error) {
         throw new Error(response.resultObject.error.reason + ". " + response.resultObject.error.details);
     }
+    return response;
 }
 
 
@@ -693,34 +696,4 @@ function buildInsightFilter(client: Client, request: Request) {
         filter += ` and (${arr.join(" OR ")})`;
     }
     return filter;
-}
-
-/**
- * Checks if the secret key of the addon is correct
- * @param secretKey 
- * @param dataRetrievalService 
- * @returns true if the secret key is valid, false otherwise
- */
-async function validateSecretKey(secretKey: string, dataRetrievalService: DataRetrievalService) {
-    if (secretKey) {
-        try {
-            await dataRetrievalService.validateHeaders(secretKey.toLowerCase());
-            return true;
-        }
-        catch (err) {
-            if (err instanceof Error) {
-                // the following lines make sure that the error doesn't expose implementation details about the validation of the key
-                let errorMessage = err.message.match(/error: (\{.+\})/);
-                if (errorMessage && errorMessage.length > 1) {
-                    let errorObject = JSON.parse(errorMessage[1]);
-                    if (errorObject.fault?.faultstring)
-                        throw new Error(errorObject.fault.faultstring);
-                }
-            }
-            throw new Error("Failed to verify secret key");
-        }
-    }
-    else {
-        throw new Error("Secret key was not provided");
-    }
 }
