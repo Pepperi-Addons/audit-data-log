@@ -21,6 +21,7 @@ import { RESOURCE_CHUNK_SIZE } from './entities';
 import { v4 as uuid } from 'uuid';
 
 const helper = new Helper();
+export const utilitiesService = new UtilitiesService();
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
@@ -159,7 +160,6 @@ export async function upsert_audit_data_logs(client: Client, request: Request) {
     if (request.method !== 'POST') {
         throw new Error("This operation is only available in POST");
     }
-    const utilitiesService = new UtilitiesService();
     request.header = helper.normalizeHeaders(request.header);
     await utilitiesService.validateOwner(client, request);
 
@@ -169,12 +169,12 @@ export async function upsert_audit_data_logs(client: Client, request: Request) {
     let body = request.body;
     // "Objects" cannot be empty
     if (!body.Objects || !body.Objects.length) {
-        throw new Error("Objects array is mandatory and must not be empty.");
+        throw new Error("Objects array is mandatory and must not be empty");
     }
 
     // if "Objects" length is greater than max length defined, throw an error
     if (body.Objects.length > RESOURCE_CHUNK_SIZE) {
-        throw new Error("Objects array can contain at most 500 objects")
+        throw new Error(`Objects array can contain at most ${RESOURCE_CHUNK_SIZE} objects`)
     }
 
     const response: UpsertResponseObject[] = [];
@@ -205,20 +205,22 @@ export async function upsert_audit_data_logs(client: Client, request: Request) {
         bulkBodyNDJSON += JSON.stringify(doc) + os.EOL;
     }
 
-    const dataRetrievalService = new DataRetrievalService(client);
-    const elasticResponse = await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
-    if (elasticResponse.resultObject.errorMessage) {
-        throw elasticResponse.resultObject;
-    }
-    // match elastic response with body "Objects" to get the "ObjectKey" for response.
-    for (const item of elasticResponse.resultObject.items) {
-        const matchingObject = body.Objects.find(object => object['_id'] === item.index._id);
-        if (matchingObject) {
-            const responseEntry = {
-                Key: matchingObject.ObjectKey,
-                Status: utilitiesService.capitalize(item.index.result)
-            };
-            response.push(responseEntry);
+    if (bulkBodyNDJSON) {
+        const dataRetrievalService = new DataRetrievalService(client);
+        const elasticResponse = await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
+        if (elasticResponse.resultObject.errorMessage) {
+            throw elasticResponse.resultObject;
+        }
+        // match elastic response with body "Objects" to get the "ObjectKey" for response.
+        for (const item of elasticResponse.resultObject.items) {
+            const matchingObject = body.Objects.find(object => object['_id'] === item.index._id);
+            if (matchingObject) {
+                const responseEntry = {
+                    Key: matchingObject.ObjectKey,
+                    Status: utilitiesService.capitalize(item.index.result)
+                };
+                response.push(responseEntry);
+            }
         }
     }
     console.log(`finish upsert_audit_data_logs to elastic search`);
