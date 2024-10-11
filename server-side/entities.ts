@@ -35,5 +35,8 @@ export const COMPUTING_TIME_FUNCTION_NAME = "get_functions_computing_time_from_e
 export const AUDIT_LOG_BLOCK_NAME = 'Audit_Data_Log';
 export const MOD_AUDIT_LOG_BLOCK_NAME = 'AuditDataLog';
 export const CODE_JOB_EXECUTIONS_BLOCK_NAME = 'AsyncJobs';
+export const VALID_SOURCES = ["Android", "iOS", "Web"];
+export const BYPASS_CLIENT_ADDONS = ["00000000-0000-0000-0000-000000abcdef"];
+export const LOGS_ACTION_TYPES = ["insert", "update"];
 
 

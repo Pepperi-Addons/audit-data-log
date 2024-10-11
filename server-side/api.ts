@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { Document, UpdatedField } from "../shared/models/document"
+import { Document, UpdatedField, UpsertResponseObject } from "../shared/models/document"
 import { Constants } from "../shared/constants"
 import * as os from 'os';
 import jwtDecode from 'jwt-decode';
@@ -16,9 +16,11 @@ import { UptimeSyncService } from './elastic-sync-data/uptime-sync';
 import { SmartFilters } from './elastic-sync-data/smart-filters.service';
 import DataRetrievalService from './data-retrieval.service';
 import { SyncEffectivenessService } from './elastic-sync-data/sync_effectiveness.service';
-import { UtilitiesService } from './utilities.service'; 
+import { UtilitiesService } from './utilities.service';
+import { RESOURCE_CHUNK_SIZE } from './entities';
+import { v4 as uuid } from 'uuid';
 
-const helper = new Helper()
+const helper = new Helper();
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
@@ -154,85 +156,73 @@ export async function transactions_and_activities_data(client) {
  */
 export async function upsert_audit_data_logs(client: Client, request: Request) {
     console.log(`Got upsert_audit_data_logs request - body.WriteMode: ${request.body.WriteMode}`);
+    if (request.method !== 'POST') {
+        throw new Error("This operation is only available in POST");
+    }
     const utilitiesService = new UtilitiesService();
-    try {
-        if (request.method !== 'POST') {
-            throw new Error("This operation is only available in POST");
-        }
-        request.header = helper.normalizeHeaders(request.header);
-        const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
-        await utilitiesService.validateOwner(client, request);
-        const dateString = new Date().toISOString();
-        let bulkBody = new Array();
+    request.header = helper.normalizeHeaders(request.header);
+    await utilitiesService.validateOwner(client, request);
 
-        let body = request.body;
-        // objects cannot be empty
-        if (!body.Objects.length || !body.Objects) {
-            throw new Error("Objects array is mandatory and must not be empty.");
-        }
-
-        // if objects length is greater than max length defined, throw an error
-        if (body.Objects.length > 500) {
-            throw new Error("Objects array can contain at most 500 objects")
-        }
-
-        const responseArr: {
-            Key: string;
-            Status: string;
-            Details?: string
-        }[] = [];
-        for (const object of body.Objects) {
-            if (!utilitiesService.validateObject(object, client.AddonUUID, responseArr)) {
-                continue; // Skip to the next object if validation fails
-            }
-
-            if (object[`UpdatedFields`]) {
-                for (const updatedField of object[`UpdatedFields`]) {
-                    // if the type of NewValue is object, then stringify it
-                    if (typeof updatedField.NewValue === 'object') {
-                        updatedField.NewValue = JSON.stringify(updatedField.NewValue);
-                    }
-                    // if the type of OldValue is object, then stringify it
-                    if (typeof updatedField.OldValue === 'object') {
-                        updatedField.OldValue = JSON.stringify(updatedField.OldValue);
-                    }
-                }
-            }
-    
-            const doc: AddonData = {
-                ActionUUID: object.ActionUUID,
-                ObjectKey: object.ObjectKey,
-                ObjectModificationDateTime: object.ObjectModificationDateTime,
-                Resource: object.Resource,
-                ActionType: object.ActionType,
-                Source: object.Source,
-                UpdatedFields: <UpdatedField[]>object[`UpdatedFields`],
-                DistributorUUID: distributorUUID,
-                CreationDateTime: dateString,
-                // UserUUID: object.UserUUID,
-                AddonUUID: client.AddonUUID,
-            }
-
-            bulkBody.push({ "index": { "_index": Constants.AUDIT_DATA_LOG_INDEX, "_type": "_doc" } });
-            bulkBody.push(doc);
-        }
-
-        let bulkBodyNDJSON = "";
-
-        for (const line of bulkBody) {
-            bulkBodyNDJSON = bulkBodyNDJSON + JSON.stringify(line) + os.EOL;
-        };
-
-        const dataRetrievalService = new DataRetrievalService(client);
-        const response = await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
-        // push data into responseArr
-        console.log('response>>>>>>>>>>>>', response)
-        console.log(`finish upsert_audit_data_logs to elastic search`);
-    } catch (error) {
-        console.log(`error in audit_data_log: ${(error as Error).message}`);
-        return error;
+    const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
+    const UserUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.useruuid"];
+    const dateString = new Date().toISOString();
+    let body = request.body;
+    // "Objects" cannot be empty
+    if (!body.Objects || !body.Objects.length) {
+        throw new Error("Objects array is mandatory and must not be empty.");
     }
 
+    // if "Objects" length is greater than max length defined, throw an error
+    if (body.Objects.length > RESOURCE_CHUNK_SIZE) {
+        throw new Error("Objects array can contain at most 500 objects")
+    }
+
+    const response: UpsertResponseObject[] = [];
+    let bulkBodyNDJSON = "";
+    for (const object of body.Objects) {
+        if (!utilitiesService.validateObject(object, client.AddonUUID, response)) {
+            continue; // Skip to the next object if validation fails
+        }
+
+        utilitiesService.formatUpdatedFieldValues(object)
+        // generate "_id" for mapping from elastic search reponse
+        object['_id'] = uuid();
+        const doc: AddonData = {
+            ActionUUID: object.ActionUUID,
+            ObjectKey: object.ObjectKey,
+            ObjectModificationDateTime: object.ObjectModificationDateTime,
+            Resource: object.Resource,
+            ActionType: object.ActionType,
+            Source: object.Source,
+            UpdatedFields: <UpdatedField[]>object[`UpdatedFields`],
+            DistributorUUID: distributorUUID,
+            CreationDateTime: dateString,
+            UserUUID: UserUUID,
+            AddonUUID: client.AddonUUID,
+        }
+        // Concatenate the index action and document to the bulkBodyNDJSON string
+        bulkBodyNDJSON += JSON.stringify({ "index": { "_index": Constants.AUDIT_DATA_LOG_INDEX, _id: object['_id'], "_type": "_doc" } }) + os.EOL;
+        bulkBodyNDJSON += JSON.stringify(doc) + os.EOL;
+    }
+
+    const dataRetrievalService = new DataRetrievalService(client);
+    const elasticResponse = await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
+    if (elasticResponse.resultObject.errorMessage) {
+        throw elasticResponse.resultObject;
+    }
+    // match elastic response with body "Objects" to get the "ObjectKey" for response.
+    for (const item of elasticResponse.resultObject.items) {
+        const matchingObject = body.Objects.find(object => object['_id'] === item.index._id);
+        if (matchingObject) {
+            const responseEntry = {
+                Key: matchingObject.ObjectKey,
+                Status: utilitiesService.capitalize(item.index.result)
+            };
+            response.push(responseEntry);
+        }
+    }
+    console.log(`finish upsert_audit_data_logs to elastic search`);
+    return response;
 }
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
@@ -292,7 +282,6 @@ export async function post_to_elastic_search(client: Client, request: Request) {
     const body = request.body;
     const endpoint = `/${Constants.AUDIT_DATA_LOG_INDEX}/_bulk`
     const method = 'POST';
-
     // we wait as much as we can without killing the lambda (lambda timeout is 30 seconds)
     const maxWaitingForElastic = 28000;
     let timer: NodeJS.Timeout | undefined;
