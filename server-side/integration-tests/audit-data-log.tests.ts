@@ -53,7 +53,7 @@ export class AuditDataLogTests extends BaseTest {
                     }
                     validateOwnerStub.restore(); // Restore after the test
 
-                })
+                });
 
                 it('Objects is mandatory and cannot be empty', async () => {
                     let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
@@ -89,7 +89,7 @@ export class AuditDataLogTests extends BaseTest {
 
                 it('Validate object source', async () => {
                     let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
-                        "x-pepperi-ownerid": 'owner'
+                        "x-pepperi-ownerid": MOCK_OWNER_ID
                     });
                     let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
                     const response = await this.apiService.post('api/upsert_audit_data_logs', { Objects: [{ Source: "Test" }] });
