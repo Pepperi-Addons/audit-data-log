@@ -17,13 +17,9 @@ export class UtilitiesService {
             const errorMessage = 'Missing headers, make sure you send ownerID & SecretKey'
             throw new Error(errorMessage)
         }
-
-        if (client.AddonUUID !== ownerUUID) {
-            throw new Error('AddonUUID must be equal to X-Pepperi-OwnerID header value');
-        }
         try {
             const dataRetrievalService = new DataRetrievalService(client);
-            await dataRetrievalService.validateHeaders(addonSecretKey);
+            await dataRetrievalService.validateHeaders(addonSecretKey, ownerUUID);
         } catch (err) {
             console.error('got error: ', JSON.stringify(err));
             throw new Error("Failed to verify secret key");
@@ -37,7 +33,7 @@ export class UtilitiesService {
      * @param responseArr 
      * @returns 
      */
-    validateObject(object: AddonData, clientAddonUUID: string, responseArr: UpsertResponseObject[]): boolean {
+    validateObject(object: AddonData, ownerUUID: string, responseArr: UpsertResponseObject[]): boolean {
         const validSources = new Set(VALID_SOURCES);
         const byPassClientAddons = new Set(BYPASS_CLIENT_ADDONS);
         const validActionTypes = new Set(LOGS_ACTION_TYPES);
@@ -45,19 +41,19 @@ export class UtilitiesService {
         if (!object.Source || !validSources.has(object.Source)) {
             console.error(`Invalid Source: ${object.Source}`);
             responseArr.push({
-                Key: object.ObjectKey,
+                Key: object._id,
                 Status: 'Error',
                 Details: `Invalid Source: ${object.Source}`
             });
             return false; // Invalid Source
         }
         // Validate AddonUUID
-        if (object.AddonUUID !== clientAddonUUID && !byPassClientAddons.has(clientAddonUUID)) {
-            console.error(`Data source AddonUUID: ${object.AddonUUID} does not match with ownerID: ${clientAddonUUID}`);
+        if (object.AddonUUID !== ownerUUID && !byPassClientAddons.has(ownerUUID)) {
+            console.error(`Data source AddonUUID: ${object.AddonUUID} does not match with ownerID: ${ownerUUID}`);
             responseArr.push({
-                Key: object.ObjectKey,
+                Key: object._id,
                 Status: 'Error',
-                Details: `Data source AddonUUID: ${object.AddonUUID} does not match with ownerID: ${clientAddonUUID}`
+                Details: `Data source AddonUUID: ${object.AddonUUID} does not match with ownerID: ${ownerUUID}`
             });
             return false; // Invalid AddonUUID
         }
@@ -65,7 +61,7 @@ export class UtilitiesService {
         if (object.ActionType && !validActionTypes.has(object.ActionType)) {
             console.error(`Invalid ActionType: ${object.ActionType}`);
             responseArr.push({
-                Key: object.ObjectKey,
+                Key: object._id,
                 Status: 'Error',
                 Details: `Invalid ActionType: ${object.ActionType}`
             });

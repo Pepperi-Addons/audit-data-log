@@ -20,7 +20,7 @@ import { UtilitiesService } from './utilities.service';
 import { RESOURCE_CHUNK_SIZE } from './entities';
 import { v4 as uuid } from 'uuid';
 
-const helper = new Helper();
+export const helper = new Helper();
 export const utilitiesService = new UtilitiesService();
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
@@ -180,13 +180,13 @@ export async function upsert_audit_data_logs(client: Client, request: Request) {
     const response: UpsertResponseObject[] = [];
     let bulkBodyNDJSON = "";
     for (const object of body.Objects) {
-        if (!utilitiesService.validateObject(object, client.AddonUUID, response)) {
+        // generate "_id" for mapping from elastic search reponse
+        object['_id'] = uuid();
+        if (!utilitiesService.validateObject(object, request.header['x-pepperi-ownerid'].toLowerCase(), response)) {
             continue; // Skip to the next object if validation fails
         }
 
-        utilitiesService.formatUpdatedFieldValues(object)
-        // generate "_id" for mapping from elastic search reponse
-        object['_id'] = uuid();
+        utilitiesService.formatUpdatedFieldValues(object);
         const doc: AddonData = {
             ActionUUID: object.ActionUUID,
             ObjectKey: object.ObjectKey,
@@ -198,13 +198,12 @@ export async function upsert_audit_data_logs(client: Client, request: Request) {
             DistributorUUID: distributorUUID,
             CreationDateTime: dateString,
             UserUUID: UserUUID,
-            AddonUUID: client.AddonUUID,
+            AddonUUID: request.header['x-pepperi-ownerid'].toLowerCase(),
         }
         // Concatenate the index action and document to the bulkBodyNDJSON string
-        bulkBodyNDJSON += JSON.stringify({ "index": { "_index": Constants.AUDIT_DATA_LOG_INDEX, _id: object['_id'], "_type": "_doc" } }) + os.EOL;
+        bulkBodyNDJSON += JSON.stringify({ "create": { "_index": Constants.AUDIT_DATA_LOG_INDEX, _id: object['_id'], "_type": "_doc" } }) + os.EOL;
         bulkBodyNDJSON += JSON.stringify(doc) + os.EOL;
     }
-
     if (bulkBodyNDJSON) {
         const dataRetrievalService = new DataRetrievalService(client);
         const elasticResponse = await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
@@ -213,11 +212,11 @@ export async function upsert_audit_data_logs(client: Client, request: Request) {
         }
         // match elastic response with body "Objects" to get the "ObjectKey" for response.
         for (const item of elasticResponse.resultObject.items) {
-            const matchingObject = body.Objects.find(object => object['_id'] === item.index._id);
+            const matchingObject = body.Objects.find(object => object['_id'] === item.create._id);
             if (matchingObject) {
                 const responseEntry = {
-                    Key: matchingObject.ObjectKey,
-                    Status: utilitiesService.capitalize(item.index.result)
+                    Key: matchingObject._id,
+                    Status: utilitiesService.capitalize(item.create.result)
                 };
                 response.push(responseEntry);
             }

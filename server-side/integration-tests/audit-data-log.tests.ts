@@ -1,26 +1,10 @@
 import { AddonAPIService, BaseTest, LocalAddonAPIService, ServicesContainer } from "@pepperi-addons/addon-testing-framework";
 import { AddonUUID } from "../../addon.config.json";
-import { utilitiesService } from "../api";
+import { utilitiesService, helper } from "../api";
 import sinon from 'sinon';
 import { RESOURCE_CHUNK_SIZE, VALID_SOURCES } from "../entities";
+import { MOCK_OWNER_ID, UPSERT_ERROR_PAYLOAD, UPSERT_SUCCESS_PAYLOAD } from "../data/audit-logs.mock";
 
-const mockObject = {
-    "Source": "Web",
-    "ActionUUID": "8825e6f4-b47f-4f45-9545-89fc65769e05",
-    "ActionType": "insert",
-    "ObjectKey": "98a7a422-a0a7-4333-9c30-67bca8f3ea4d",
-    "ObjectModificationDateTime": "2024-10-07T14:59:48Z",
-    "AddonUUID": "00000000-0000-0000-0000-00000da1a109",
-    "Resource": "MyTasks",
-    "UpdatedFields": [
-        {
-            "FieldID": "Status",
-            "NewValue": "4",
-            "OldValue": "3"
-        }
-    ]
-
-}
 export class AuditDataLogTests extends BaseTest {
     title = 'Audit Data Log Tests';
     apiService!: AddonAPIService;
@@ -66,7 +50,6 @@ export class AuditDataLogTests extends BaseTest {
                     } catch (error) {
                         const message = this.extractBodyMessage((error as Error).message);
                         expect(message).to.equal("Failed to verify secret key");
-                       
                     }
                     validateOwnerStub.restore(); // Restore after the test
 
@@ -105,13 +88,20 @@ export class AuditDataLogTests extends BaseTest {
                 });
 
                 it('Validate object source', async () => {
+                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
+                        "x-pepperi-ownerid": 'owner'
+                    });
                     let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
                     const response = await this.apiService.post('api/upsert_audit_data_logs', { Objects: [{ Source: "Test" }] });
                     expect(response[0].Details).to.equal('Invalid Source: Test');
                     validateOwnerStub.restore(); // Restore after the test
+                    helperStub.restore();
                 });
 
                 it('Validate object AddonUUID', async () => {
+                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
+                        "x-pepperi-ownerid": MOCK_OWNER_ID
+                    });
                     let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
                     const response = await await this.apiService.post('api/upsert_audit_data_logs', {
                         Objects: [{
@@ -119,41 +109,67 @@ export class AuditDataLogTests extends BaseTest {
                             AddonUUID: "123"
                         }]
                     })
-                    expect(response[0].Details).to.equal(`Data source AddonUUID: 123 does not match with ownerID: ${AddonUUID}`);
+                    expect(response[0].Details).to.equal(`Data source AddonUUID: 123 does not match with ownerID: ${MOCK_OWNER_ID}`);
                     validateOwnerStub.restore(); // Restore after the test
+                    helperStub.restore();
                 });
 
                 it('Validate object ActionType', async () => {
+                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
+                        "x-pepperi-ownerid": MOCK_OWNER_ID
+                    });
                     let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
                     const response = await this.apiService.post('api/upsert_audit_data_logs', {
                         Objects: [
                             {
                                 Source: VALID_SOURCES[0],
-                                AddonUUID,
+                                AddonUUID: MOCK_OWNER_ID,
                                 ActionType: 'Delete'
                             }
                         ]
                     })
                     expect(response[0].Details).to.equal(`Invalid ActionType: Delete`)
                     validateOwnerStub.restore(); // Restore after the test
+                    helperStub.restore();
                 });
-
-
-
             });
 
             describe("Successfully upsert the data", () => {
                 it("upsert audit log data into elastic search", async () => {
+                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
+                        "x-pepperi-ownerid": MOCK_OWNER_ID
+                    });
                     let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
                     const response = await this.apiService.post('api/upsert_audit_data_logs', {
                         Objects: [
-                            { ...mockObject }
+                            ...UPSERT_SUCCESS_PAYLOAD
                         ]
-                    })
-                    expect(response[0].Key).to.equal("98a7a422-a0a7-4333-9c30-67bca8f3ea4d");
+                    });
+                    expect(response.length).to.equal(2);
                     expect(response[0].Status).to.equal("Created");
+                    expect(response[1].Status).to.equal("Created");
                     validateOwnerStub.restore(); // Restore after the test
+                    helperStub.restore();
+                })
+            })
 
+            describe("Should fail one object and upsert the one object data", () => {
+                it("upsert audit log data into elastic search", async () => {
+                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
+                        "x-pepperi-ownerid": MOCK_OWNER_ID
+                    });
+                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
+                    const response = await this.apiService.post('api/upsert_audit_data_logs', {
+                        Objects: [
+                            ...UPSERT_ERROR_PAYLOAD
+                        ]
+                    });
+                    expect(response.length).to.equal(2);
+                    expect(response[0].Status).to.equal("Error");
+                    expect(response[0].Details).to.equal(`Data source AddonUUID: ${UPSERT_ERROR_PAYLOAD[1].AddonUUID} does not match with ownerID: ${MOCK_OWNER_ID}`);
+                    expect(response[1].Status).to.equal("Created");
+                    validateOwnerStub.restore(); // Restore after the test
+                    helperStub.restore();
                 })
             })
         });

@@ -44,7 +44,7 @@ class DataRetrievalService {
     }
 
     async get_users_names(table: string, resultMap, UUIDlist: string[]) {
-        try{
+        try {
             console.log(`Looking for users names: ${UUIDlist.join(', ')}`);
             const getResourceRes = await this.papiClient.post(`/${table}/search`, { UUIDList: UUIDlist, Fields: "UUID,Email,InternalID" })
             getResourceRes.forEach(element => {
@@ -63,11 +63,11 @@ class DataRetrievalService {
         const getResourceRes = await this.papiClient.get(`/addons?${queryString}`);
         console.log(`Successfully Got addons names`);
         return getResourceRes;
-    } catch (error) {
+    } catch(error) {
         console.error(`Error: ${error}`);
     }
 
-    async validateHeaders(secretKey: string) {    
+    async validateHeaders(secretKey: string, ownerUUID?: string) {
         const papiClient = new PapiClient({
             baseURL: this.client.BaseURL,
             token: this.client.OAuthAccessToken,
@@ -75,8 +75,8 @@ class DataRetrievalService {
             actionUUID: this.client.ActionUUID,
             addonSecretKey: secretKey
         });
-    
-        await papiClient.get(`/var/sk/addons/${config.AddonUUID}/validate`); // throws error if invalid
+        const ownerId = ownerUUID ? ownerUUID : config.AddonUUID;
+        await papiClient.get(`/var/sk/addons/${ownerId}/validate`); // throws error if invalid
     }
 }
 
