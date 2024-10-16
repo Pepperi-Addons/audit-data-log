@@ -4,18 +4,14 @@ import { AuditDataFieldLogBlockComponent } from './audit-data-field-log-block.co
 import { TranslateLoader, TranslateModule, TranslateService, TranslateStore } from '@ngx-translate/core';
 import { PepAddonService } from '@pepperi-addons/ngx-lib';
 import { config } from 'src/app/addon.config';
-import { PepListModule } from '@pepperi-addons/ngx-lib/list';
-import { PepPageLayoutModule } from '@pepperi-addons/ngx-lib/page-layout';
-import { PepUIModule } from 'src/app/modules/pepperi.module';
+import { PepGenericListModule } from '@pepperi-addons/ngx-composite-lib/generic-list';
 
 
 @NgModule({
   declarations: [AuditDataFieldLogBlockComponent],
   imports: [
     CommonModule,
-    PepListModule,
-    PepPageLayoutModule,
-    PepUIModule,
+    PepGenericListModule,
     TranslateModule.forChild({
       loader: {
         provide: TranslateLoader,

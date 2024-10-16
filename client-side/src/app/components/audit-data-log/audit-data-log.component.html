@@ -26,7 +26,8 @@
     <ng-container pep-top-area>
         <pep-top-bar>
             <pep-list-total [totalRows]="customConflictList?.totalRows"></pep-list-total>
-            <pep-search [value]="searchString" (search)="onSearchChanged($event)" [triggerOn]="'click'" (valueChange)="onSearchAutocompleteChanged($event)" (stateChange)="onSearchStateChanged($event)">
+            <pep-search [value]="searchString" (search)="onSearchChanged($event)" [triggerOn]="'click'"
+                (valueChange)="onSearchAutocompleteChanged($event)" (stateChange)="onSearchStateChanged($event)">
             </pep-search>
         </pep-top-bar>
     </ng-container>
@@ -37,8 +38,19 @@
         </pep-side-bar>
     </ng-container>
     <ng-container pep-main-area>
+        <div *ngIf="showAuditDataFieldLogButton || showAsyncJobButton">
+            <pep-button *ngIf="showAuditDataFieldLogButton" value="Open Audit Data Field Log ABI" styleType="weak"
+                styleStateType="system" sizeType="md" classNames="" [disabled]="false" iconPosition="end"
+                [visible]="true" (buttonClick)="openAuditDataFieldLogABI()"></pep-button>
+            <pep-button *ngIf="showAsyncJobButton" value="Open Async Jobs ABI" styleType="weak" styleStateType="system"
+                sizeType="md" classNames="" [disabled]="false" iconPosition="end" [visible]="true"
+                (buttonClick)="openAsyncJobABI()"></pep-button>
+        </div>
         <div class="list-container" #conflictslistContainer>
-            <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="50" [viewType]="viewType" [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found." (valueChange)="notifyValueChanged($event)" (sortingChange)="sortingChange($event)" (selectedItemsChange)="selectedRowsChanged($event)" (fieldClick)="onCustomizeFieldClick($event)">
+            <pep-list id="list" [supportSorting]="true" [pagerType]="'pages'" [pageSize]="50" [viewType]="viewType"
+                [selectionTypeForActions]="'none'" noDataFoundMsg="No results were found."
+                (valueChange)="notifyValueChanged($event)" (sortingChange)="sortingChange($event)"
+                (selectedItemsChange)="selectedRowsChanged($event)" (fieldClick)="onCustomizeFieldClick($event)">
             </pep-list>
         </div>
     </ng-container>
