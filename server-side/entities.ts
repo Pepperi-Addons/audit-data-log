@@ -36,4 +36,7 @@ export const AUDIT_LOG_BLOCK_NAME = 'Audit_Data_Log';
 export const MOD_AUDIT_LOG_BLOCK_NAME = 'AuditDataLog';
 export const CODE_JOB_EXECUTIONS_BLOCK_NAME = 'AsyncJobs';
 
+export const FIELD_AUDIT_LOG_BLOCK_NAME = `AuditDataFieldLog`;
+
+
 

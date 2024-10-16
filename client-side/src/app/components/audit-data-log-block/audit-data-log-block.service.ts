@@ -150,6 +150,30 @@ export class AuditDataLogBlock {
             false
         );
     }
+
+    async field_id_audit_data_log_query(where: string, property: string) {
+        const params = {};
+        if (where) {
+            params[`where`] = where;
+        }
+        if (property) {
+            params['field_id'] = property;
+        }
+
+        params['order_by'] = 'ObjectModificationDateTime desc';
+        params['page_size'] = 200;
+
+
+        return await firstValueFrom(this.addonService.getAddonApiCall(
+            this.addonUUID,
+            'api',
+            'get_audit_log_data_by_field_id',
+            { params: params },
+            false
+        ));
+    }
+
+
     private buildCloudWatchParams(addon_uuid: string, action_uuid: string, search_string: string, search_string_fields: string, level: string, logGroups: string) {
         let params = {};
         // TODO - remove when the nucules will be real addon

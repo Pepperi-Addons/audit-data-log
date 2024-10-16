@@ -1,4 +1,4 @@
-import { Component, destroyPlatform, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
 import { FIELD_TYPE, ObjectsDataRow, PepDataConvertorService, PepFieldData, PepRowData, PepWindowScrollingService, UIControl, X_ALIGNMENT_TYPE } from '@pepperi-addons/ngx-lib';
 import { IPepMenuItemClickEvent, PepMenuItem } from '@pepperi-addons/ngx-lib/menu';
 import { TranslateService } from '@ngx-translate/core';
@@ -22,6 +22,7 @@ import { data } from 'jquery';
 import { NIL as NIL_UUID } from 'uuid';
 import jwtDecode from 'jwt-decode';
 import { config } from 'src/app/addon.config';
+import { PepAddonBlockLoaderService } from '@pepperi-addons/ngx-lib/remote-loader';
 
 @Component({
   selector: 'addon-audit-data-log',
@@ -55,13 +56,16 @@ export class AuditDataLogComponent implements OnInit {
   addons = {}
   numberOfResults = '';
   docs: Document[] = [];
+  showAsyncJobButton = false;
+  showAuditDataFieldLogButton = false;
 
 
   constructor(public translate: TranslateService,
     private dataConvertorService: PepDataConvertorService,
     private addonService: AuditDataLogBlock,
     private location: Location,
-
+    private addonBlockLoaderService: PepAddonBlockLoaderService,
+    private viewRef: ViewContainerRef,
     private router: Router,
     public routeParams: ActivatedRoute) {
     this.searchStringFields = 'ActionUUID.keyword,ObjectKey.keyword,UpdatedFields.FieldID,UpdatedFields.NewValue,UpdatedFields.OldValue';
@@ -78,11 +82,14 @@ export class AuditDataLogComponent implements OnInit {
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.docs = docs.AuditLogs;
       this.users = docs.Users;
-      this.addons = docs.Addons; 
+      this.addons = docs.Addons;
       this.loadSmartFilters();
       this.loadDataLogsList(docs.AuditLogs);
       this.loadMenuItems();
-        });
+    });
+    // For handover
+    this.showAuditDataFieldLogButton = this.routeParams.snapshot.queryParams['showAuditDataFieldLogButton'];
+    this.showAsyncJobButton = this.routeParams.snapshot.queryParams['showAsyncJobButton'];
   }
 
   private loadSmartFilters(): void {
@@ -225,6 +232,36 @@ export class AuditDataLogComponent implements OnInit {
     );
 
   }
+
+  // For Handover
+  openAuditDataFieldLogABI() {
+    console.log('this.routeParams.snapshot.queryParams.ObjectKeythis.routeParams.snapshot.queryParams.ObjectKey', this.routeParams.snapshot.queryParams.ObjectKey)
+    this.addonBlockLoaderService.loadAddonBlockInDialog({
+      name: 'AuditDataFieldLog',
+      container: this.viewRef,
+      size: 'full-screen',
+      hostObject: {
+        "ObjectKey": this.routeParams.snapshot.queryParams.ObjectKey,
+        "Resource": this.routeParams.snapshot.queryParams.Resource,
+        FieldID: this.routeParams.snapshot.queryParams.FieldID,
+        Title: this.routeParams.snapshot.queryParams.Title ,
+        "AddonUUID":this.routeParams.snapshot.queryParams.AddonUUID
+      }
+    })
+  }
+
+  // For Handover
+  openAsyncJobABI() {
+    this.addonBlockLoaderService.loadAddonBlockInDialog({
+      name: 'AsyncJobs',
+      container: this.viewRef,
+      size: 'full-screen',
+      hostObject: {
+        where: this.routeParams.snapshot.queryParams.where
+      }
+    })
+  }
+
 
   convertConflictToPepRowData(doc: Document, customKeys) {
     const row = new PepRowData();
@@ -376,10 +413,10 @@ export class AuditDataLogComponent implements OnInit {
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.docs = docs.AuditLogs;
       this.users = docs.Users;
-      this.addons = docs.Addons; 
+      this.addons = docs.Addons;
       this.loadDataLogsList(docs.AuditLogs);
       this.loadSmartFilters();
-      });
+    });
   }
 
   onSearchStateChanged(searchStateChangeEvent: IPepSearchStateChangeEvent) {
@@ -393,10 +430,10 @@ export class AuditDataLogComponent implements OnInit {
     this.addonService.audit_data_log_query(this.searchString, this.filtersStr, this.searchStringFields).subscribe((docs) => {
       this.docs = docs.AuditLogs;
       this.users = docs.Users;
-      this.addons = docs.Addons; 
+      this.addons = docs.Addons;
       this.loadDataLogsList(docs.AuditLogs);
       this.loadSmartFilters();
-      }, err => {
+    }, err => {
 
     })
   }

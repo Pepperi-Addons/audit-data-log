@@ -44,11 +44,16 @@ class DataRetrievalService {
     }
 
     async get_users_names(table: string, resultMap, UUIDlist: string[]) {
-        try{
+        try {
             console.log(`Looking for users names: ${UUIDlist.join(', ')}`);
-            const getResourceRes = await this.papiClient.post(`/${table}/search`, { UUIDList: UUIDlist, Fields: "UUID,Email,InternalID" })
+            const getResourceRes = await this.papiClient.post(`/${table}/search`, { UUIDList: UUIDlist, Fields: "UUID,Email,InternalID,FirstName,LastName,ExternalID" });
             getResourceRes.forEach(element => {
-                resultMap[element.UUID] = { Email: element.Email, InternalID: element.InternalID }; // creates the UUID-Email mapping
+                resultMap[element.UUID] = {
+                    Email: element.Email, InternalID: element.InternalID, FirstName: element.FirstName,
+                    LastName: element.LastName,
+                    ExternalID: element.ExternalID
+                }
+                // creates the UUID-Email mapping
             });
             console.log(`Successfully Got users names: ${UUIDlist.join(', ')}`);
         } catch (error) {

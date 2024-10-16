@@ -16,6 +16,7 @@ import { config } from './addon.config';
 import { PepAddonService } from '@pepperi-addons/ngx-lib';
 import { SettingsComponent } from './components/settings';
 import { AuditDataLogBlockComponent } from './components/audit-data-log-block';
+import { AuditDataFieldLogBlockComponent } from './components/audit-data-field-log-block/audit-data-field-log-block.component';
 import { AsyncJobsBlockComponent } from './components/async-jobs-block/async-jobs-block.component';
 
 @NgModule({
@@ -34,7 +35,7 @@ import { AsyncJobsBlockComponent } from './components/async-jobs-block/async-job
         TranslateModule.forRoot({
             loader: {
                 provide: TranslateLoader,
-                useFactory: (addonService: PepAddonService) => 
+                useFactory: (addonService: PepAddonService) =>
                     PepAddonService.createMultiTranslateLoader(config.AddonUUID, addonService, ['ngx-lib']),
                 deps: [PepAddonService]
             }
@@ -58,6 +59,7 @@ export class AppModule implements DoBootstrap {
 
     ngDoBootstrap() {
         this.pepAddonService.defineCustomElement(`block-element-${config.AddonUUID}`, AuditDataLogBlockComponent, this.injector);
+        this.pepAddonService.defineCustomElement(`audit-data-field-log-block-element-${config.AddonUUID}`, AuditDataFieldLogBlockComponent, this.injector);
         // ABI to view async jobs
         this.pepAddonService.defineCustomElement(`async-jobs-block-element-${config.AddonUUID}`, AsyncJobsBlockComponent, this.injector);
         this.pepAddonService.defineCustomElement(`settings-element-${config.AddonUUID}`, SettingsComponent, this.injector);
