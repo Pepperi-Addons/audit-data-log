@@ -20,4 +20,10 @@ export interface Document {
 }
 
 
+export interface UpsertResponseObject {
+    Key: string;
+    Status: string;
+    Details?: string
+}
+
 

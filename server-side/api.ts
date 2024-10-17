@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { Document, UpdatedField } from "../shared/models/document"
+import { Document, UpdatedField, UpsertResponseObject } from "../shared/models/document"
 import { Constants } from "../shared/constants"
 import * as os from 'os';
 import jwtDecode from 'jwt-decode';
@@ -7,7 +7,7 @@ import { callElasticSearchLambda } from '@pepperi-addons/system-addon-utils';
 import QueryUtil from '../shared/utilities/query-util'
 import { CPAPIUsage } from './CPAPIUsage';
 import { ComputeFunctionsDuration, RelationResultType } from './compute-functions-running-time.service'
-import { PapiClient, Helper } from '@pepperi-addons/papi-sdk';
+import { PapiClient, Helper, AddonData } from '@pepperi-addons/papi-sdk';
 import PermissionManager from './permission-manager.service';
 import { InternalSyncService } from './elastic-sync-data/internal-sync.service';
 import { SyncJobsService } from './elastic-sync-data/sync-jobs.service';
@@ -16,22 +16,26 @@ import { UptimeSyncService } from './elastic-sync-data/uptime-sync';
 import { SmartFilters } from './elastic-sync-data/smart-filters.service';
 import DataRetrievalService from './data-retrieval.service';
 import { SyncEffectivenessService } from './elastic-sync-data/sync_effectiveness.service';
+import { UtilitiesService } from './utilities.service';
+import { RESOURCE_CHUNK_SIZE } from './entities';
+import { v4 as uuid } from 'uuid';
 
-const helper = new Helper()
+const helper = new Helper();
+const utilitiesService = new UtilitiesService();
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
-    
+
     const endpoint = `${Constants.AUDIT_DATA_LOG_INDEX}/_search`;
     request.header = helper.normalizeHeaders(request.header)
     await dataRetrievalService.validateHeaders(request.header['x-pepperi-secretkey'].toLowerCase());
 
-    try{
+    try {
         console.log(`About to search data in elastic, calling callElasticSearchLambda`);
         const res = await callElasticSearchLambda(endpoint, 'POST', request.body);
         console.log(`Successfully called callElasticSearchLambda and got data.`);
         return res.resultObject.hits.hits;
-    } catch(err){
+    } catch (err) {
         throw new Error(`Could not search data in elastic, error: ${err}`);
     }
 }
@@ -146,9 +150,83 @@ export async function transactions_and_activities_data(client) {
     return returnObject;
 }
 
+/**
+ * Function is for batch upsert of audit data logs into elastic search.
+ * @param client 
+ * @param request 
+ */
+export async function upsert_audit_data_logs(client: Client, request: Request) {
+    console.log(`Got upsert_audit_data_logs request - body.WriteMode: ${request.body.WriteMode}`);
+    if (request.method !== 'POST') {
+        throw new Error("This operation is only available in POST");
+    }
+    request.header = helper.normalizeHeaders(request.header);
+    await utilitiesService.validateOwner(client, request);
+
+    const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
+    const UserUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.useruuid"];
+    const dateString = new Date().toISOString();
+    let body = request.body;
+    // "Objects" cannot be empty
+    if (!body.Objects || !body.Objects.length) {
+        throw new Error("Objects array is mandatory and must not be empty");
+    }
+
+    // if "Objects" length is greater than max length defined, throw an error
+    if (body.Objects.length > RESOURCE_CHUNK_SIZE) {
+        throw new Error(`Objects array can contain at most ${RESOURCE_CHUNK_SIZE} objects`)
+    }
+
+    const response: UpsertResponseObject[] = [];
+    let bulkBodyNDJSON = "";
+    for (const object of body.Objects) {
+        // generate "_id" for mapping from elastic search reponse
+        object['_id'] = uuid();
+        if (!utilitiesService.validateObject(object, request.header['x-pepperi-ownerid'].toLowerCase(), response)) {
+            continue; // Skip to the next object if validation fails
+        }
+
+        utilitiesService.formatUpdatedFieldValues(object);
+        const doc: AddonData = {
+            ActionUUID: object.ActionUUID,
+            ObjectKey: object.ObjectKey,
+            ObjectModificationDateTime: object.ObjectModificationDateTime,
+            Resource: object.Resource,
+            ActionType: object.ActionType,
+            Source: object.Source,
+            UpdatedFields: <UpdatedField[]>object[`UpdatedFields`],
+            DistributorUUID: distributorUUID,
+            CreationDateTime: dateString,
+            UserUUID: UserUUID,
+            AddonUUID: request.header['x-pepperi-ownerid'].toLowerCase(),
+        }
+        // Concatenate the index action and document to the bulkBodyNDJSON string
+        bulkBodyNDJSON += JSON.stringify({ "create": { "_index": Constants.AUDIT_DATA_LOG_INDEX, _id: object['_id'], "_type": "_doc" } }) + os.EOL;
+        bulkBodyNDJSON += JSON.stringify(doc) + os.EOL;
+    }
+    if (bulkBodyNDJSON) {
+        const dataRetrievalService = new DataRetrievalService(client);
+        const elasticResponse = await dataRetrievalService.papiClient.post("/addons/api/" + client.AddonUUID + "/api/post_to_elastic_search", bulkBodyNDJSON);
+        if (elasticResponse.resultObject.errorMessage) {
+            throw elasticResponse.resultObject;
+        }
+        // match elastic response with body "Objects" to get the "ObjectKey" for response.
+        for (const item of elasticResponse.resultObject.items) {
+            const matchingObject = body.Objects.find(object => object['_id'] === item.create._id);
+            if (matchingObject) {
+                const responseEntry = {
+                    Key: matchingObject._id,
+                    Status: utilitiesService.capitalize(item.create.result)
+                };
+                response.push(responseEntry);
+            }
+        }
+    }
+    console.log(`finish upsert_audit_data_logs to elastic search`);
+    return response;
+}
 
 export async function write_data_log_to_elastic_search(client: Client, request: Request) {
-
     let body = request.body;
     console.log(`start write data log to elastic search ActionUUID:${body.Message.ActionUUID}`);
     const distributorUUID = (<any>jwtDecode(client.OAuthAccessToken))["pepperi.distributoruuid"];
@@ -205,7 +283,6 @@ export async function post_to_elastic_search(client: Client, request: Request) {
     const body = request.body;
     const endpoint = `/${Constants.AUDIT_DATA_LOG_INDEX}/_bulk`
     const method = 'POST';
-
     // we wait as much as we can without killing the lambda (lambda timeout is 30 seconds)
     const maxWaitingForElastic = 28000;
     let timer: NodeJS.Timeout | undefined;
@@ -237,6 +314,7 @@ export async function post_to_elastic_search(client: Client, request: Request) {
     if (response.resultObject.error) {
         throw new Error(response.resultObject.error.reason + ". " + response.resultObject.error.details);
     }
+    return response;
 }
 
 
