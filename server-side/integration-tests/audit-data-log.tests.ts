@@ -1,9 +1,9 @@
 import { AddonAPIService, BaseTest, LocalAddonAPIService, ServicesContainer } from "@pepperi-addons/addon-testing-framework";
 import { AddonUUID } from "../../addon.config.json";
-import { utilitiesService, helper } from "../api";
-import sinon from 'sinon';
 import { RESOURCE_CHUNK_SIZE, VALID_SOURCES } from "../entities";
 import { MOCK_OWNER_ID, UPSERT_ERROR_PAYLOAD, UPSERT_SUCCESS_PAYLOAD } from "../data/audit-logs.mock";
+import { UtilitiesService } from "../utilities.service";
+import { Helper } from "@pepperi-addons/papi-sdk";
 
 export class AuditDataLogTests extends BaseTest {
     title = 'Audit Data Log Tests';
@@ -29,35 +29,38 @@ export class AuditDataLogTests extends BaseTest {
 
     tests(describe: (suiteTitle: string, func: () => void) => void, it: (name: string, fn: Mocha.Func) => void, expect: Chai.ExpectStatic): void {
         describe('upsert_audit_data_logs', () => {
+            const validateOwnerMockResolve = async (client, request) => Promise.resolve();
+            const validateOwnerMockReject = async (client, request) => Promise.reject(new Error("Failed to verify secret key"));
+            const originalValidateOwner = UtilitiesService.prototype.validateOwner;
+            const originalHelperNormalizeHeaders = Helper.prototype.normalizeHeaders;
+            const mockNormalizeHeaders = () => ({
+                "x-pepperi-ownerid": MOCK_OWNER_ID
+            });
             describe('Check for body validations', () => {
                 it("Only POST request allowed", async () => {
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockResolve;
                     try {
                         await this.apiService.get('api/upsert_audit_data_logs', {})
                     } catch (error) {
                         const message = this.extractBodyMessage((error as Error).message);
                         expect(message).to.equal("This operation is only available in POST")
                     }
-                    validateOwnerStub.restore(); // Restore after the test
-
                 })
 
 
                 it("validate secret key and owner id", async () => {
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').rejects(new Error("Failed to verify secret key"));
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockReject;
                     try {
                         await this.apiService.post('api/upsert_audit_data_logs', {})
                     } catch (error) {
                         const message = this.extractBodyMessage((error as Error).message);
                         expect(message).to.equal("Failed to verify secret key");
                     }
-                    validateOwnerStub.restore(); // Restore after the test
 
                 });
 
                 it('Objects is mandatory and cannot be empty', async () => {
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
-
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockResolve;
                     try {
                         await this.apiService.post('api/upsert_audit_data_logs', {})
                     } catch (error) {
@@ -71,38 +74,30 @@ export class AuditDataLogTests extends BaseTest {
                         const message = this.extractBodyMessage((error as Error).message);
                         expect(message).to.equal("Objects array is mandatory and must not be empty")
                     }
-                    validateOwnerStub.restore(); // Restore after the test
 
                 });
 
                 it('Objects length must not be more than RESOURCE_CHUNK_SIZE', async () => {
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockResolve;
                     try {
                         await this.apiService.post('api/upsert_audit_data_logs', { Objects: new Array(501) });
                     } catch (error) {
                         const message = this.extractBodyMessage((error as Error).message);
                         expect(message).to.equal(`Objects array can contain at most ${RESOURCE_CHUNK_SIZE} objects`)
                     }
-                    validateOwnerStub.restore(); // Restore after the test
 
                 });
 
                 it('Validate object source', async () => {
-                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
-                        "x-pepperi-ownerid": MOCK_OWNER_ID
-                    });
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
+                    Helper.prototype.normalizeHeaders = mockNormalizeHeaders;
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockResolve;
                     const response = await this.apiService.post('api/upsert_audit_data_logs', { Objects: [{ Source: "Test" }] });
                     expect(response[0].Details).to.equal('Invalid Source: Test');
-                    validateOwnerStub.restore(); // Restore after the test
-                    helperStub.restore();
                 });
 
                 it('Validate object AddonUUID', async () => {
-                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
-                        "x-pepperi-ownerid": MOCK_OWNER_ID
-                    });
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
+                    Helper.prototype.normalizeHeaders = mockNormalizeHeaders;
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockResolve;
                     const response = await await this.apiService.post('api/upsert_audit_data_logs', {
                         Objects: [{
                             Source: VALID_SOURCES[0],
@@ -110,15 +105,11 @@ export class AuditDataLogTests extends BaseTest {
                         }]
                     })
                     expect(response[0].Details).to.equal(`Data source AddonUUID: 123 does not match with ownerID: ${MOCK_OWNER_ID}`);
-                    validateOwnerStub.restore(); // Restore after the test
-                    helperStub.restore();
                 });
 
                 it('Validate object ActionType', async () => {
-                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
-                        "x-pepperi-ownerid": MOCK_OWNER_ID
-                    });
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
+                    Helper.prototype.normalizeHeaders = mockNormalizeHeaders;
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockResolve;
                     const response = await this.apiService.post('api/upsert_audit_data_logs', {
                         Objects: [
                             {
@@ -129,17 +120,16 @@ export class AuditDataLogTests extends BaseTest {
                         ]
                     })
                     expect(response[0].Details).to.equal(`Invalid ActionType: Delete`)
-                    validateOwnerStub.restore(); // Restore after the test
-                    helperStub.restore();
                 });
+
+                UtilitiesService.prototype.validateOwner = originalValidateOwner;
+                Helper.prototype.normalizeHeaders = originalHelperNormalizeHeaders;
             });
 
             describe("Successfully upsert the data", () => {
                 it("upsert audit log data into elastic search", async () => {
-                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
-                        "x-pepperi-ownerid": MOCK_OWNER_ID
-                    });
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
+                    Helper.prototype.normalizeHeaders = mockNormalizeHeaders;
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockResolve;
                     const response = await this.apiService.post('api/upsert_audit_data_logs', {
                         Objects: [
                             ...UPSERT_SUCCESS_PAYLOAD
@@ -148,17 +138,15 @@ export class AuditDataLogTests extends BaseTest {
                     expect(response.length).to.equal(2);
                     expect(response[0].Status).to.equal("Created");
                     expect(response[1].Status).to.equal("Created");
-                    validateOwnerStub.restore(); // Restore after the test
-                    helperStub.restore();
                 })
+                UtilitiesService.prototype.validateOwner = originalValidateOwner;
+                Helper.prototype.normalizeHeaders = originalHelperNormalizeHeaders;
             })
 
             describe("Should fail one object and upsert the one object data", () => {
                 it("upsert audit log data into elastic search", async () => {
-                    let helperStub = sinon.stub(helper, 'normalizeHeaders').returns({
-                        "x-pepperi-ownerid": MOCK_OWNER_ID
-                    });
-                    let validateOwnerStub = sinon.stub(utilitiesService, 'validateOwner').resolves();
+                    Helper.prototype.normalizeHeaders = mockNormalizeHeaders;
+                    UtilitiesService.prototype.validateOwner = validateOwnerMockResolve;
                     const response = await this.apiService.post('api/upsert_audit_data_logs', {
                         Objects: [
                             ...UPSERT_ERROR_PAYLOAD
@@ -168,9 +156,9 @@ export class AuditDataLogTests extends BaseTest {
                     expect(response[0].Status).to.equal("Error");
                     expect(response[0].Details).to.equal(`Data source AddonUUID: ${UPSERT_ERROR_PAYLOAD[1].AddonUUID} does not match with ownerID: ${MOCK_OWNER_ID}`);
                     expect(response[1].Status).to.equal("Created");
-                    validateOwnerStub.restore(); // Restore after the test
-                    helperStub.restore();
                 })
+                UtilitiesService.prototype.validateOwner = originalValidateOwner;
+                Helper.prototype.normalizeHeaders = originalHelperNormalizeHeaders;
             })
         });
     }

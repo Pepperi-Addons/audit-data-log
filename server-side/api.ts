@@ -20,8 +20,8 @@ import { UtilitiesService } from './utilities.service';
 import { RESOURCE_CHUNK_SIZE } from './entities';
 import { v4 as uuid } from 'uuid';
 
-export const helper = new Helper();
-export const utilitiesService = new UtilitiesService();
+const helper = new Helper();
+const utilitiesService = new UtilitiesService();
 
 export async function get_elastic_search_lambda(client: Client, request: Request) {
     const dataRetrievalService = new DataRetrievalService(client);
